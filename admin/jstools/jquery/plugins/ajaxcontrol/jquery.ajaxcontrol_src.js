@@ -1,0 +1,2328 @@
+/* $Date: 2010-06-17 16:13:34 +0200 (to, 17 jun 2010) $    $Revision: 6582 $ */
+
+(function($){
+
+  var language = null;
+  var languages = null;
+  var tl = new Object();
+
+  function attranslate(txt) {
+    if (!language) {
+      var response = NFN.BasePage.GetLanguages();
+      language = response.value[0];
+      languages = response.value[1].split(',');
+    }
+    if (language == "sv") return txt;
+    if (!tl[language]) {
+      var sarr = ['Välj tidpunkt','Nyare','Äldre','Avbryt','Stäng','Elementet visas inte på den publika sidan','Redigera elementet','Senast redigerat av','Senast publicerat av','Redigera behörigheter','Publicera ändringar','Ångra till senast publicerat','Elementets innehåll är ändrat men inte publicerat','Visa elementet på den publika sidan','Dölj elementet på den publika sidan','Dela elementets egenskaper med andra webbsidor','Ångra delning av elementets egenskaper med andra webbsidor','Dela elementets egenskaper med hela sajten','Ångra delning av elementets egenskaper med hela sajten','Spara och publicera ändringar i elementet','Spara ändringar i elementet','Ångra ändringar','Posten redigeras av en annan användare. Försök senare','Är du säker på att du vill ångra ändringar och återgå till det senast publicerade värdet','Denna åtgärd medför att nuvarande information i kontrollen ersätts med delad information. Vill du fortsätta','Denna åtä¤rd medför att motsvarande informationspost på alla sajtens sidor kommer att ha samma innehåll. Vill du fortsätta','Denna åtgärd medför att motsvarande informationspost på sajtens olika sidor ej längre kommer att dela innehåll. Vill du fortsätta','Roller','Välj roll','Sätt standardbehörigheter för rollen','Behörigheter'];
+      var response = NFN.BasePage.TranslateArr(sarr);
+      tl[language] = new Object();
+      for (var i=0; i < sarr.length; i++)
+        tl[language][sarr[i]] = response.value[i];
+    }
+    return (tl[language][txt] ? tl[language][txt] : txt);
+  }
+
+
+  $.fn.ajaxcontrol = function(options, propId, parentList) {
+
+    var nofinit = 0;
+    var thisref = this;
+
+    function initDone() {
+      nofinit++;
+      if (nofinit == thisref.length && options && options.onInitDone)
+        options.onInitDone();
+    }
+
+    return this.each(function() {
+
+      var obj = this;
+
+      var settings = jQuery.extend({}, jQuery.fn.ajaxcontrol.defaults, options);
+      if (settings.toolbarItems.length > 0) settings.toolbarConfig = "custom";
+
+      var styles = "";
+      var editPermission = false;
+
+      obj.initdone = false;
+      obj.isChanged = false;
+      var tinyIsReady = false;
+      var htmlTemplates = null;
+
+      obj.hasPermission = new Object();
+
+      var mainProp = new Object();
+      if (propId) mainProp.id = propId;
+      else {
+        try { mainProp.id = parseInt($(obj).attr("propid")); }
+        catch(e) { mainProp.id = 0; }
+        if (isNaN(mainProp.id)) mainProp.id = 0;
+        mainProp.name = $(obj).attr("id");
+      }
+      var tinyId = "tiny_" + $(obj).attr("id");
+
+      obj.init = function() {
+        obj.statdiv = $(this);
+        if (_loggedin) {
+          NFN.BasePage.HasEditPermission(_pageId, $(obj).attr("id"), $(obj).attr("propid"), function(r){obj.init1(r);});
+        }
+        else {
+          var controltype = obj.getRenderedControltype();
+          obj.initdone = true;
+          if (controltype == "images") obj.initCycle();
+          if (controltype == "flash") obj.initFlash();
+          if (controltype == "movie") obj.initMovie();
+          initDone();
+        }
+      },
+
+      obj.init1 = function(response) {
+        editPermission = response.value;
+        if (editPermission || settings.contentByAjax) {
+          obj.getControlInfo(settings.contentByAjax, function(){obj.init2();});
+        }
+        else {
+          obj.initdone = true;
+          initDone();
+        }
+      },
+
+      obj.init2 = function(response) {
+        if (mainProp.controlType == "tiny")
+          htmlTemplates = obj.getHtmlTemplates();
+        obj.setDimensions();
+        obj.generateDom(function(){obj.init3();});
+      },
+
+      obj.init3 = function() {
+        obj.initdone = true;
+        initDone();
+        obj.propertyIsSet = true;
+      },
+
+      obj.setDimensions = function() {
+        if (mainProp.controlType == "tiny" || mainProp.controlType == "text") {
+          settings.width = (settings.width ? settings.width : ($(obj).width() == 0 ? settings.defwidth : $(obj).width() + 4));
+          settings.height = (settings.height ? settings.height : ($(obj).height() == 0 ? settings.defheight : $(obj).height() + 30));
+        }
+        else if (mainProp.controlType == "images") {
+/*          if (!settings.width) {
+            var w = 0;
+            var currobj = $(obj);
+            while (w == 0 && currobj.parent().length > 0) {
+              w = currobj.width();
+              currobj = currobj.parent();
+            }
+            settings.width = w;
+          }*/
+        }
+      },
+
+      obj.generateDom = function(callback) {
+        obj.clearDom();
+        if (mainProp.controlType == "tiny")
+          obj.generateTinyDOM(callback);
+        else if (mainProp.controlType == "images")
+          obj.generateImageDOM(callback);
+        else if (mainProp.controlType == "text")
+          obj.generateTextDOM(callback);
+        else if (mainProp.controlType == "flash")
+          obj.generateFlashDOM(callback);
+        else if (mainProp.controlType == "movie")
+          obj.generateMovieDOM(callback);
+        else
+          callback();
+      },
+
+      obj.clearDom = function() {
+        function hasClass(obj, classes) {
+          var found = false;
+          for (var i=0; i < classes.length && !found; i++)
+            found = obj.hasClass(classes[i]);
+          return found;
+        }
+        while (hasClass($(obj).prev(),["ajaxPermissions","ajaxTools","ajaxToolbarStatic","_ajaxControls","_txtEdit"]))
+          $(obj).prev().remove();
+      },
+
+      obj.getRenderedControltype = function() {
+        var res = "tiny";
+        if ($(obj).hasClass("ajaxText")) res = "text";
+        else if ($(obj).hasClass("ajaxImage")) res = "image";
+        else if ($(obj).hasClass("ajaxImages")) res = "images";
+        else if ($(obj).hasClass("ajaxFlash")) res = "flash";
+        else if ($(obj).hasClass("ajaxMovie")) res = "movie";
+        return res;
+      },
+
+      obj.getRenderedValue = function() {
+        var val = "";
+        if (mainProp.controlType == "tiny") val = obj.getRenderedTinyValue();
+        else if (mainProp.controlType == "images") val = obj.getRenderedImagesValue();
+        else if (mainProp.controlType == "text") val = obj.getRenderedTextValue();
+        else if (mainProp.controlType == "flash") val = obj.getRenderedFlashValue();
+        else if (mainProp.controlType == "movie") val = obj.getRenderedMovieValue();
+        return val;
+      },
+
+      obj.getPropValue = function() {
+        return mainProp.value;
+      },
+
+      obj.getControlInfo = function(getContent, callback) {
+        NFN.BasePage.GetControlInfo(_pageId, mainProp.id, mainProp.name, getContent, function(r) {obj.getControlInfo2(r, getContent, callback)});
+      },
+
+      obj.getControlInfo2 = function(response, getContent, callback) {
+        if (response.error) {
+          try { console.log("Error in GetControlInfo: " + response.error.Message); } catch(e){};
+          return;
+        }
+        if (!response.value) {
+          try { console.log("Error in GetControlInfo: response is null."); } catch(e){};
+          return;
+        }
+
+        var propInfo = response.value[0];
+        var permInfo = response.value[1];
+        var extraInfo = response.value[2];
+
+        mainProp.id = parseInt(propInfo[0]);
+        mainProp.name = propInfo[1];
+        mainProp.modDate = propInfo[2];
+        mainProp.modBy = propInfo[3];
+        mainProp.publishedDate = propInfo[4];
+        mainProp.publishedBy = propInfo[5];
+        mainProp.isPublished = propInfo[6] == "y";
+        mainProp.languageDependent = propInfo[7] == "y";
+        mainProp.isVisible = propInfo[8] == "y";
+        mainProp.isShared = propInfo[9] == "y";
+        mainProp.canBeShared = propInfo[10] == "y";
+        mainProp.isCommon = propInfo[11] == "y";
+        mainProp.canBeCommon = propInfo[12] == "y";
+        mainProp.startDate = propInfo[13];
+        mainProp.endDate = propInfo[14];
+        mainProp.controlType = propInfo[15];
+        if (mainProp.controlType.length == 0) mainProp.controlType = "tiny";
+        if (getContent)
+          mainProp.value = propInfo[16];
+        else
+          mainProp.value = obj.getRenderedValue();
+
+        obj.hasPermission.isSysAdmin = permInfo[0] == "y";
+        obj.hasPermission.edit = permInfo[1] == "y";
+        obj.hasPermission.publish = permInfo[2] == "y";
+        obj.hasPermission.show = permInfo[3] == "y";
+        obj.hasPermission.share = permInfo[4] == "y";
+        obj.hasPermission.restore = permInfo[5] == "y";
+        obj.hasPermission.datecontrol = permInfo[6] == "y";
+        obj.hasPermission.controltype = permInfo[7] == "y";
+        obj.hasPermission.languageDependent = permInfo[8] == "y";
+
+        obj.hasPermission.Paragraph = permInfo[9] == "y";
+        obj.hasPermission.Font = permInfo[10] == "y";
+        obj.hasPermission.Css = permInfo[11] == "y";
+        obj.hasPermission.Character = permInfo[12] == "y";
+        obj.hasPermission.CharacterExtended = permInfo[13] == "y";
+        obj.hasPermission.Color = permInfo[14] == "y";
+        obj.hasPermission.Justify = permInfo[15] == "y";
+        obj.hasPermission.Paste = permInfo[16] == "y";
+        obj.hasPermission.PasteExtended = permInfo[17] == "y";
+        obj.hasPermission.Undo = permInfo[18] == "y";
+        obj.hasPermission.Search = permInfo[19] == "y";
+        obj.hasPermission.Link = permInfo[20] == "y";
+        obj.hasPermission.DocumentBank = permInfo[21] == "y";
+        obj.hasPermission.Media = permInfo[22] == "y";
+        obj.hasPermission.HtmlTemplates = permInfo[23] == "y";
+        obj.hasPermission.List = permInfo[24] == "y";
+        obj.hasPermission.Indent = permInfo[25] == "y";
+        obj.hasPermission.Table = permInfo[26] == "y";
+        obj.hasPermission.TableExtended = permInfo[27] == "y";
+        obj.hasPermission.Style = permInfo[28] == "y";
+        obj.hasPermission.Layer = permInfo[29] == "y";
+        obj.hasPermission.Zoom = permInfo[30] == "y";
+        obj.hasPermission.Special = permInfo[31] == "y";
+        obj.hasPermission.SpecialExtended = permInfo[32] == "y";
+        obj.hasPermission.Advanced = permInfo[33] == "y";
+        obj.hasPermission.InsertHtml = permInfo[34] == "y";
+
+        styles = extraInfo[0];
+
+        $(obj).removeClass();
+        if (mainProp.controlType == "text") $(obj).addClass("ajaxText");
+        else if (mainProp.controlType == "image") $(obj).addClass("ajaxImage");
+        else if (mainProp.controlType == "images") $(obj).addClass("ajaxImages");
+        else if (mainProp.controlType == "flash") $(obj).addClass("ajaxFlash");
+        else if (mainProp.controlType == "movie") $(obj).addClass("ajaxMovie");
+        else $(obj).addClass("ajaxTiny");
+        $(obj).addClass("ajaxControl");
+
+        if (callback) callback();
+      },
+
+      obj.deleteMe = function() {
+        if (confirm(attranslate("Är du säker på att du vill ta bort elementet") + "?"))
+          parentList.deleteElement($(obj));
+      },
+
+
+      obj.getEditbtndiv = function() {
+
+        var editbtndiv = $("<div />").addClass("ajaxToolbarStatic").mouseover(function(){obj.highlight(true);}).mouseout(function(){obj.highlight(false);}).css({"z-index":"100"});
+
+        editbtndiv.append(
+          $("<table />").append(
+            $("<tbody />").append(
+              $("<tr />").append(
+                $("<td />").append(
+                  $("<img />").attr({ "src":"admin/gfx/hidden.gif", "alt":attranslate("Elementet visas inte på den publika sidan"), "title":attranslate("Elementet visas inte på den publika sidan") }).css({ "display":"none" })
+        )))));
+
+        var atr = editbtndiv.find("tr");
+        var atitle = attranslate("Redigera elementet") + " " + tinyId.substring(5) + "(" + mainProp.id + ")\n\r" + attranslate("Senast redigerat av") + " " + mainProp.modBy + " " + mainProp.modDate + "\n\r" + attranslate("Senast publicerat av") + " " + mainProp.publishedBy + " " + mainProp.publishedDate;
+        obj.editlink = $("<a />").attr({ "href":"javascript:void(0)", "title":atitle}).focus(function(){this.blur();}).click(function(e){obj.edit(e);});
+        atr.append(
+          $("<td />").append(
+            obj.editlink.append(
+              $("<img />").attr({ "src":"admin/gfx/edit.gif", "alt":attranslate("Redigera elementet"), "border":"0" })
+        )));
+
+        if (obj.hasPermission.show || obj.hasPermission.share || obj.hasPermission.restore || obj.hasPermission.datecontrol || obj.hasPermission.controltype || (obj.hasPermission.languageDependent && languages.length > 1)) {
+          atr.append(
+            $("<td />").append(
+              $("<a />").attr({ "href":"javascript:void(0)", "title":attranslate("Kontrollinställningar")}).focus(function(){this.blur();}).click(function(e){obj.openTools(e);}).append(
+                $("<img />").attr({ "src":"admin/gfx/tools.gif", "alt":attranslate("Kontrollinställningar"), "border":"0" })
+          )));
+        }
+
+        if (parentList && parentList.hasPermission.del) {
+          atr.append(
+            $("<td />").append(
+              $("<a />").attr({ "href":"javascript:void(0)", "title":attranslate("Ta bort") }).focus(function(){this.blur();}).click(function(e){obj.deleteMe(e);}).mouseover(function(){obj.highlight(true);}).mouseout(function(){obj.highlight(false);}).append(
+                $("<img />").attr({ "src":"admin/gfx/delete.gif", "alt":attranslate("Ta bort"), "border":"0" })
+          )));
+        }
+
+        if (obj.hasPermission.isSysAdmin) {
+          atr.append(
+            $("<td />").append(
+              $("<a />").attr({ "href":"javascript:void(0)", "title":attranslate("Redigera behörigheter")}).focus(function(){this.blur();}).click(function(e){obj.showPermissions(e);}).mouseover(function(){obj.highlight(true);}).mouseout(function(){obj.highlight(false);}).append(
+                $("<img />").attr({ "src":"admin/gfx/permission.gif", "alt":attranslate("Redigera behörigheter"), border:"0" })
+          )));
+        }
+
+        if (obj.hasPermission.publish) {
+          obj.publishbtn = $("<a />").attr({ "href":"javascript:void(0)", "title":attranslate("Publicera ändringar") }).focus(function(){this.blur();}).click(function(e){obj.publish(e);}).mouseover(function(){obj.highlight(true);}).mouseout(function(){obj.highlight(false);}).css({'display':(mainProp.isPublished ? "none" : "inline")});
+          atr.append(
+            $("<td />").append(
+              obj.publishbtn.append(
+                $("<img />").attr({ "src":"admin/gfx/publish.gif", "alt":attranslate("Publicera ändringar"), "border":"0" })
+          )));
+          obj.unpublishbtn = $("<a />").attr({ "href":"javascript:void(0)", "title":attranslate("Ångra till senast publicerat")}).focus(function(){this.blur();}).click(function(e){obj.unpublish(e);}).mouseover(function(){obj.highlight(true);}).mouseout(function(){obj.highlight(false);}).css({'display':(mainProp.isPublished ? "none" : "inline")});
+          atr.append(
+            $("<td />").append(
+              obj.unpublishbtn.append(
+                $("<img />").attr({ "src":"admin/gfx/unpublish.gif", "alt":attranslate("Ångra till senast publicerat"), "border":"0" })
+          )));
+        }
+        else {
+          obj.publishinfo = $("<span />").css({ "display":(mainProp.isPublished ? "none" : "inline") });
+          atr.append(
+            $("<td />").append(
+              obj.publishinfo.append(
+                $("<img />").attr({ "src":"admin/gfx/publish.gif", "alt":attranslate("Elementets innehåll är ändrat men inte publicerat"), "border":"0" })
+          )));
+        }
+        return editbtndiv;
+
+      },
+
+      obj.getToolsDiv = function() {
+        var atr = $("<tr />");
+
+        if (obj.hasPermission.controltype) {
+          obj.controltypesel = $("<select />").attr("title",attranslate("Välj typ av kontroll")).append(
+            $("<option />").attr("value","tiny").html(attranslate("Redigerbart innehåll"))
+          ).append(
+            $("<option />").attr("value","text").html(attranslate("Text"))
+          ).append(
+            $("<option />").attr("value","images").html(attranslate("Bild/Bildspel"))
+          ).append(
+            $("<option />").attr("value","flash").html(attranslate("Flash"))
+          ).append(
+            $("<option />").attr("value","movie").html(attranslate("Film"))
+          );
+
+          atr.append(
+            $("<td />").append(
+              $("<span />").html(attranslate("Kontrolltyp"))
+            ).append($("<br />")).append(
+              obj.controltypesel
+            )
+          );
+        }
+
+        if (obj.hasPermission.languageDependent && languages.length > 1) {
+          obj.langdepicon = $("<img />").attr("border","0");
+          atr.append(
+            $("<td />").attr("valign","bottom").append(
+              $("<a />").attr("href","javascript:void(0)").focus(function(){this.blur();}).click(function(e){
+                var isdep = (obj.langdepicon.attr("src").indexOf("langdep") > 0);
+                obj.langdepicon.attr({
+                  "src": (isdep ? "admin/gfx/langindep.gif" : "admin/gfx/langdep.gif"),
+                  "title": (isdep ? attranslate("Sätt olika innehåll på olika språk") : attranslate("Sätt samma innehåll på alla språk"))
+                })
+              }).append(obj.langdepicon)
+            )
+          );
+        }
+
+        if (obj.hasPermission.show) {
+          obj.showicon = $("<img />").attr("border","0");
+          atr.append(
+            $("<td />").attr("valign","bottom").append(
+              $("<a />").attr("href","javascript:void(0)").focus(function(){this.blur();}).click(function(e){
+                var isvis = (obj.showicon.attr("src").indexOf("show") > 0);
+                obj.showicon.attr({
+                  "src": (isvis ? "admin/tinymce/gfx/hide.gif" : "admin/tinymce/gfx/show.gif"),
+                  "title": (isvis ? attranslate("Dölj elementet på den publika sidan") : attranslate("Visa elementet på den publika sidan"))
+                })
+              }).append(obj.showicon)
+            )
+          );
+        }
+
+        if (obj.hasPermission.share && mainProp.canBeShared) {
+          obj.shareicon = $("<img />").attr("border","0");
+          atr.append(
+            $("<td />").attr("valign","bottom").append(
+              $("<a />").attr("href","javascript:void(0)").focus(function(){this.blur();}).click(function(e){
+                var isshare = (obj.shareicon.attr("src").indexOf("unshare") < 0);
+                obj.shareicon.attr({
+                  "src": (isshare ? "admin/tinymce/gfx/unshare.gif" : "admin/tinymce/gfx/share.gif"),
+                  "title": (isshare ? attranslate("Ångra delning av elementets egenskaper med andra webbsidor") : attranslate("Dela elementets egenskaper med andra webbsidor"))
+                })
+              }).append(obj.shareicon)
+            )
+          );
+        }
+
+        if (obj.hasPermission.share && mainProp.canBeCommon) {
+          obj.commonicon = $("<img />").attr("border","0");
+          atr.append(
+            $("<td />").attr("valign","bottom").append(
+              $("<a />").attr("href","javascript:void(0)").focus(function(){this.blur();}).click(function(e){
+                var iscommon = (obj.commonicon.attr("src").indexOf("uncommon") < 0);
+                obj.commonicon.attr({
+                  "src": (iscommon ? "admin/tinymce/gfx/uncommon.gif" : "admin/tinymce/gfx/common.gif"),
+                  "title": (iscommon ? attranslate("Ångra delning av elementets egenskaper med hela sajten") : attranslate("Dela elementets egenskaper med hela sajten"))
+                })
+              }).append(obj.commonicon)
+            )
+          );
+        }
+
+        if (obj.hasPermission.datecontrol && settings.dateControlled) {
+          obj.inpstartdate = $("<input />").attr("type","hidden");
+          obj.linkstartdate = $("<span />");
+          atr.append(
+            $("<td />").append(
+              $("<span />").html(attranslate("Slut"))
+            ).append($("<br />")).append(obj.inpstartdate).append(
+              $("<a />").attr({ "href":"javascript:void(0)", title:attranslate("Sätt startdatum för visning")}).focus(function(){this.blur();}).click(function(){
+                showCalendar(obj.inpstartdate.get(0), this, false, function(cal, adate){
+                  cal.sel.value = adate;
+                  cal.shownAt.innerHTML = adate;
+                });
+              }).append(obj.linkstartdate)
+            )
+          );
+
+          obj.inpenddate = $("<input />").attr("type","hidden");
+          obj.linkenddate = $("<span />");
+          atr.append(
+            $("<td />").append(
+              $("<span />").html(attranslate("Start"))
+            ).append($("<br />")).append(obj.inpenddate).append(
+              $("<a />").attr({ "href":"javascript:void(0)", title:attranslate("Sätt slutdatum för visning")}).focus(function(){this.blur();}).click(function(){
+                showCalendar(obj.inpenddate.get(0), this, false, function(cal, adate){
+                  cal.sel.value = adate;
+                  cal.shownAt.innerHTML = adate;
+                });
+              }).append(obj.linkenddate)
+            )
+          );
+        }
+
+        var toolsdiv = $("<div />").addClass("ajaxTools").append(
+          $("<div />").css("font-weight","bold").html(attranslate("Kontrollinställningar"))
+        ).append(
+          $("<table />").attr("cellspacing","5").append(atr)
+        );
+        toolsdiv.append(
+          $("<div />").addClass("toolsSaveDiv").append(
+            $("<a />").attr("href","javascript:void(0)").focus(function(){this.blur()}).click(function(){obj.saveTools()}).append(
+              $("<img />").attr({"src":"admin/gfx/save.gif","alt":attranslate("Spara"),"border":"0"})
+            )
+          ).append(
+            $("<a />").attr("href","javascript:void(0)").css("margin-left","10px").focus(function(){this.blur()}).click(function(){obj.closeTools()}).append(
+              $("<img />").attr({"src":"admin/gfx/cancel.gif","alt":attranslate("Avbryt"),"border":"0"})
+            )
+          )
+        );
+
+        return toolsdiv;
+      },
+
+      obj.setToolsValues = function() {
+
+        obj.controltypesel.val(mainProp.controlType);
+
+        if (obj.hasPermission.languageDependent && languages.length > 1) {
+          obj.langdepicon.attr({
+            "src": (mainProp.languageDependent ? "admin/gfx/langdep.gif" : "admin/gfx/langindep.gif"),
+            "title": (mainProp.languageDependent ? attranslate("Sätt samma innehåll på alla språk") : attranslate("Sätt olika innehåll på olika språk"))
+          })
+        }
+
+        if (obj.hasPermission.show) {
+          obj.showicon.attr({
+            "src": (mainProp.isVisible ? "admin/tinymce/gfx/hide.gif" : "admin/tinymce/gfx/show.gif"),
+            "title": (mainProp.isVisible ? attranslate("Dölj elementet på den publika sidan") : attranslate("Visa elementet på den publika sidan"))
+          })
+        }
+
+        if (obj.hasPermission.share && mainProp.canBeShared) {
+          obj.shareicon.attr({
+            "src": (mainProp.isShared ? "admin/tinymce/gfx/unshare.gif" : "admin/tinymce/gfx/share.gif"),
+            "title": (mainProp.isShared ? attranslate("Ångra delning av elementets egenskaper med andra webbsidor") : attranslate("Dela elementets egenskaper med andra webbsidor"))
+          })
+        }
+
+        if (obj.hasPermission.share && mainProp.canBeCommon) {
+          obj.commonicon.attr({
+            "src": (mainProp.isCommon ? "admin/tinymce/gfx/uncommon.gif" : "admin/tinymce/gfx/common.gif"),
+            "title": (mainProp.isCommon ? attranslate("Ångra delning av elementets egenskaper med hela sajten") : attranslate("Dela elementets egenskaper med hela sajten"))
+          })
+        }
+
+        if (obj.hasPermission.datecontrol && settings.dateControlled) {
+          obj.inpstartdate.val(mainProp.startDate);
+          obj.linkstartdate.html(mainProp.startDate);
+          obj.inpenddate.val(mainProp.endDate);
+          obj.linkenddate.html(mainProp.endDate);
+        }
+      },
+
+
+      obj.getToolsValues = function() {
+
+        var vals = {
+          controltype:obj.controltypesel.val(),
+          langdep:(obj.hasPermission.languageDependent && languages.length > 1 ? (obj.langdepicon.attr("src").indexOf("langdep") > 0 ? "1" : "0") : ""),
+          show:(obj.hasPermission.show ? (obj.showicon.attr("src").indexOf("show") > 0 ? "0" : "1") : ""),
+          share:(obj.hasPermission.share && mainProp.canBeShared ? (obj.shareicon.attr("src").indexOf("unshare") > 0 ? "1" : "0") : ""),
+          common:(obj.hasPermission.share && mainProp.canBeCommon ? (obj.commonicon.attr("src").indexOf("uncommon") > 0 ? "1" : "0") : ""),
+          start:(obj.hasPermission.datecontrol && settings.dateControlled ? obj.inpstartdate.val() : ""),
+          end:(obj.hasPermission.datecontrol && settings.dateControlled ? obj.inpenddate.val() : "")
+        };
+        return vals;
+      },
+
+
+      obj.getPermdiv = function() {
+        var permdiv = $("<div />").addClass("ajaxPermissions").css({ "background-color":"#fff", "width":settings.width, "height":settings.height });
+
+        permdiv.append(
+          $("<div />").addClass("ajaxHeadDiv").append(
+            $("<a />").attr({ "href":"javascript:void(0)" }).focus(function(){this.blur();}).click(function(e) {obj.stopPropagation(e);obj.permdiv.css({"display":"none"});}).append(
+              $("<img />").attr({ "src":"admin/gfx/closewind.gif", "alt":attranslate("Stäng"), "border":"0" } )
+            )
+          )
+        );
+
+        obj.permroles = $("<div />").addClass("ajaxRolesDiv" );
+        permdiv.append(obj.permroles);
+        obj.permsettings = $("<div />").addClass("ajaxPermissionDiv");
+        permdiv.append(obj.permsettings);
+
+        return permdiv;
+      },
+
+      obj.getSaveButtons = function(includeLink, includeNewImg) {
+        var atr = $("<tr />");
+        atr.append(
+          $("<td />").append($("<a />").attr({"href":"javascript:void(0)","title":attranslate("Spara ändringar")}).focus(function(){this.blur();}).click(function(e){obj.save(e, false);}).append(
+            $("<img />").attr({ "src":"admin/gfx/save.gif", "alt":attranslate("Spara ändringar"), "border":"0" })
+        )));
+        if (obj.hasPermission.publish) {
+          atr.append(
+            $("<td />").append(
+              $("<a />").attr({ "href":"javascript:void(0)", "title":attranslate("Spara och publicera ändringar")}).focus(function(){this.blur();}).click(function(e){obj.save(e, true);}).append(
+                $("<img />").attr({ src:"admin/gfx/savepublish.gif", "alt":attranslate("Spara och publicera ändringar"), "border":"0" })
+          )));
+        }
+        atr.append(
+          $("<td />").append(
+            $("<a />").attr({ "href":"javascript:void(0)", "title":attranslate("Ångra ändringar")}).focus(function(){this.blur();}).click(function(e){obj.undo(e);}).append(
+              $("<img />").attr({ "src":"admin/gfx/cancel.gif", "alt":attranslate("Ångra ändringar"), "border":"0" })
+        )));
+
+        if (includeLink) {
+          atr.append($("<td />").append($("<img />").attr({ "src":"admin/gfx/icondiv.gif", "alt":"", "border":"0" })));
+          atr.append(
+            $("<td />").append(
+              $("<a />").attr({ "href":"javascript:void(0)", "title":attranslate("Länka")}).focus(function(){this.blur();}).click(function(e){obj.linkPop.slideToggle();}).append(
+                $("<img />").attr({ "src":"admin/gfx/link.gif", "alt":attranslate("Länka"), "border":"0" })
+          )));
+        }
+
+        if (includeNewImg) {
+          atr.append($("<td />").append($("<img />").attr({ "src":"admin/gfx/icondiv.gif", "alt":"", "border":"0" })));
+          atr.append(
+            $("<td />").append(
+              $("<a />").attr({"href":"javascript:void(0)","title":attranslate("Lägg till ny bild")}).focus(function(){this.blur();}).click(function(){obj.newImage();}).append(
+                $("<img />").attr({"src":"/admin/gfx/new.gif","alt":attranslate("Lägg till ny bild"),"border":"0"})
+          )));
+        }
+
+        var res = $("<div />").append($("<table />").append($("<tbody />").append(atr)));
+
+        if (includeLink) {
+          obj.linkPop = $("<div />").css("display","none").append(
+            $("<table />").append(
+              $("<tr />").append($("<td />").append(attranslate("Länk:"))).append($("<td />").append(obj.hrefinput))
+            ).append(
+              $("<tr />").append($("<td />").append(attranslate("Javascript:"))).append($("<td />").append(obj.linktypecb))
+            ).append(
+              $("<tr />").append($("<td />").append(attranslate("Länkmål:"))).append($("<td />").append(obj.targetdd))
+            )
+          );
+
+          res.append(obj.linkPop);
+        }
+
+        return res;
+      },
+
+      obj.setStaticContent = function(value) {
+        if (mainProp.controlType == "tiny") obj.setStaticTinyContent(value);
+        else if (mainProp.controlType == "text") obj.setStaticTextContent(value);
+        else if (mainProp.controlType == "images") obj.setStaticImagesContent(value);
+        else if (mainProp.controlType == "flash") obj.setStaticFlashContent(value);
+        else if (mainProp.controlType == "movie") obj.setStaticMovieContent(value);
+      },
+
+      obj.setProperty = function(propertyName, propertyId, callback) {
+        //$(obj).css({"width":"", "height":""}).empty();
+        $(obj).empty();
+        obj.propertyIsSet = false;
+        mainProp.id = propertyId;
+        mainProp.name = propertyName;
+        tinyIsReady = false;
+        obj.getControlInfo(true, function() {obj.setProperty2(callback);});
+      },
+
+      obj.setProperty2 = function(callback) {
+        //settings.width = null;
+        //obj.setDimensions();
+        obj.generateDom(function(){obj.setProperty3(callback);});
+      },
+
+      obj.setProperty3 = function(callback) {
+        obj.showPublishButtons(!mainProp.isPublished);
+        var atitle = attranslate("Redigera elementet") + " " + tinyId.substring(5) + "(" + mainProp.id + ")\n\r" + attranslate("Senast redigerat av") + " " + mainProp.modBy + " " + mainProp.modDate + "\n\r" + attranslate("Senast publicerat av") + " " + mainProp.publishedBy + " " + mainProp.publishedDate;
+        if (obj.editlink)
+          obj.editlink.attr("title",atitle);
+        obj.propertyIsSet = true;
+        if (callback) callback();
+      },
+
+      obj.openRestore = function(e) {
+        obj.stopPropagation(e);
+        var pos = $("#" + tinyId + '_mce_restore').offset();
+        $("body").append($("<div />").attr({"id":tinyId+"_drestore"}).addClass("drestore").css({"left":pos.left,"top":pos.top+22}));
+        obj.getRestoreTimes(0);
+      },
+
+      obj.getRestoreTimes = function(idx) {
+        NFN.BasePage.GetRestoreTimes(mainProp.id, idx, function(r){obj.showRestoreTimes(idx, r);});
+      },
+
+      obj.showRestoreTimes = function(idx, response) {
+        var info = response.value[0].split('|');
+        var up = info[0] == "1";
+        var down = info[1] == "1";
+
+        var adiv = $("#" + tinyId + "_drestore");
+        adiv.empty();
+
+        adiv.append($("<h3 />").html(attranslate("Välj tidpunkt")));
+        if (up) adiv.append("<div />").append($("<a />").attr({"href":"javascript:void(0)"}).click(function(){obj.getRestoreTimes(idx-10);}).html(attranslate("Nyare")));
+        for (var i=1; i < response.value.length; i++) {
+          var vals = response.value[i].split('|');
+          adiv.append("<div />").append($("<a />").attr({"href":"javascript:void(0)", "id":"dr_" + vals[0]}).click(function(){obj.doRestore(obj);}).html(vals[1]));
+        }
+        if (down) adiv.append("<div />").append($("<a />").attr({"href":"javascript:void(0)"}).click(function(){obj.getRestoreTimes(idx+10);}).html(attranslate("Äldre")));
+        adiv.append("<div />").append($("<a />").attr({"href":"javascript:void(0)"}).click(function(){obj.closeRestore();}).html(attranslate("Avbryt")));
+        adiv.show();
+      },
+
+      obj.doRestore = function(a) {
+        var rid = parseInt(a.id.substring(3));
+        var adate = a.innerHTML;
+        if (confirm(attranslate("Är du säker på att du vill återställa kontrollens innehåll till tiden " + adate + "?")))
+          NFN.BasePage.RestoreProperty(mainProp.id, parseInt(rid), function(r){obj.doRestore2(r);});
+      },
+      obj.doRestore2 = function(response) {
+        obj.closeRestore();
+        obj.setEditContent(response.value);
+        obj.setStaticContent(response.value);
+        obj.lockProperty(false);
+        obj.showEditor(false);
+        obj.isChanged = false;
+      },
+
+      obj.closeRestore = function() {
+        $("#" + tinyId + "_drestore").remove();
+      },
+
+      obj.hiddenControl = function() {
+        function getDate(s) {
+          var h = s.split('-');
+          while (h[1].indexOf('0') == 0) h[1] = h[1].substring(1);
+          while (h[2].indexOf('0') == 0) h[2] = h[2].substring(1);
+          return new Date(parseInt(h[0]), parseInt(h[1])-1, parseInt(h[2]));
+        }
+        var now = new Date();
+        var yesterday = new Date();
+        yesterday.setDate(now.getDate()-1);
+        var s = getDate(mainProp.startDate);
+        var e = getDate(mainProp.endDate);
+        return !(mainProp.isVisible && s <= now && e >= yesterday);
+      },
+
+      obj.resize = function(w, h) {
+        if (!tinyIsReady) {
+          obj.initTiny(function(){obj.resize(w, h);});
+          return;
+        }
+        if (obj.tinyInstance()) {
+          var docFrame = obj.tinyInstance().contentAreaContainer.firstChild;
+          docFrame.style.width = w + "px";
+          docFrame.style.height = h + "px";
+        }
+      },
+
+      obj.setEditContent = function(value) {
+        if (mainProp.controlType == "tiny") obj.setEditTinyContent(value);
+        else if (mainProp.controlType == "text") obj.setEditTextContent(value);
+        else if (mainProp.controlType == "images") obj.setEditImagesContent(value);
+        else if (mainProp.controlType == "flash") obj.setEditFlashContent(value);
+        else if (mainProp.controlType == "movie") obj.setEditMovieContent(value);
+      },
+
+      obj.checkLoggedIn = function() {
+        var response = NFN.BasePage.CheckLoggedIn();
+        if (!response.value) {
+          obj.lockProperty(false);
+          window.location.reload();
+        }
+      },
+
+      obj.lockProperty = function(lock) {
+        if (lock) NFN.BasePage.LockProperty(mainProp.id);
+        else NFN.BasePage.UnlockProperty(mainProp.id);
+      },
+
+      obj.stopPropagation = function(e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        else if (window.event && window.event.cancelBubble)
+        window.event.cancelBubble = true;
+      },
+
+      obj.openTools = function(e) {
+        obj.checkLoggedIn();
+        obj.stopPropagation(e);
+        obj.lockProperty(true);
+
+        obj.setToolsValues();
+        obj.editbtndiv.hide();
+        obj.toolsdiv.show();
+      },
+
+      obj.closeTools = function() {
+        obj.lockProperty(false);
+        obj.toolsdiv.hide();
+      },
+
+      obj.saveTools = function() {
+        obj.checkLoggedIn();
+        var vals = obj.getToolsValues();
+        var langdep = (vals.langdep == "1");
+        langdep = (langdep == mainProp.languageDependent ? "" : vals.langdep);
+        var share = (vals.share == "1");
+        share = (share == mainProp.isShared ? "" : vals.share);
+        var common = (vals.common == "1");
+        common = (common == mainProp.isCommon ? "" : vals.common);
+        var start = (vals.start == mainProp.startDate ? "" : vals.start);
+        var end = (vals.end == mainProp.endDate ? "" : vals.end);
+
+        NFN.BasePage.SaveControlAttributes(_pageId, mainProp.id, vals.controltype, vals.langdep, vals.show, share, common, start, end, function(r){obj.saveTools2(vals, r);});
+      },
+
+      obj.saveTools2 = function(vals, response) {
+        obj.closeTools();
+
+        var refresh = false;
+        if (vals.langdep.length > 0 && (vals.langdep == "1") != mainProp.languageDependent)
+          refresh = true;
+        if (vals.show.length > 0) {
+          mainProp.isVisible = (vals.show == "1");
+          obj.setDimControl();
+        }
+        if (vals.share.length > 0 && (vals.share == "1") != mainProp.isShared)
+          refresh = true;
+        if (vals.common.length > 0 && (vals.common == "1") != mainProp.isCommon)
+          refresh = true;
+        if (vals.start.length > 0) {
+          mainProp.startDate = vals.start;
+          obj.setDimControl();
+        }
+        if (vals.end.length > 0) {
+          mainProp.endDate = vals.end;
+          obj.setDimControl();
+        }
+        if (vals.controltype.length > 0 && vals.controltype != mainProp.controlType)
+          refresh = true;
+
+        if (refresh)
+          document.location.reload();
+      },
+
+      obj.edit = function(e) {
+        obj.checkLoggedIn();
+        obj.stopPropagation(e);
+        var response = NFN.BasePage.IsLockedProperty(mainProp.id);
+        if (response.value)
+          alert(attranslate("Posten redigeras av en annan användare. Försök senare") + ".");
+        else {
+          obj.lockProperty(true);
+          obj.showEditor(true);
+        }
+      },
+
+      obj.fixParentOverflow = function(show) {
+/*        if (show) {
+          obj.parentelems = new Array();
+          var elem = $("#" + tinyId + "_main").parent();
+          while (elem.length > 0 && elem.get()[0].tagName != "HTML") {
+            if (elem.css("overflow") == "hidden") {
+              obj.parentelems.push({elem: elem, overflow: elem.css("overflow") });
+              elem.css({"overflow":"visible"});
+            }
+            elem = elem.parent();
+          }
+        }
+        else if (obj.parentelems.length > 0) {
+          for (var i=0; i < obj.parentelems.length; i++)
+            obj.parentelems[i].elem.css({"overflow" : obj.parentelems[i].overflow});
+          obj.parentelems.clear();
+        }*/
+      },
+
+      obj.showEditor = function(show) {
+        if (show && settings.beforeShowEditor) settings.beforeShowEditor($(obj));
+        if (!show && settings.beforeHideEditor) settings.beforeHideEditor($(obj));
+        if (mainProp.controlType == "tiny" && show && !tinyIsReady) {
+          obj.initTiny(function(){obj.showEditor(true);});
+          return;
+        }
+        if (mainProp.controlType == "tiny" && settings.fixParentOverflow)
+          obj.fixParentOverflow(show);
+
+        obj.editbtndiv.css({"display":(show ? "none" : "block")});
+        if (mainProp.controlType == "tiny" || mainProp.controlType == "text")
+          obj.statdiv.css({"display":(show ? "none" : "block")});
+        obj.editdiv.css({"display":(show ? "block" : "none")});
+        if (show && settings.afterShowEditor) settings.afterShowEditor($(obj));
+        if (!show && settings.afterHideEditor) settings.afterHideEditor($(obj));
+        $("#" + tinyId + "_drestore").remove();
+      },
+
+      obj.showPublishButtons = function(show) {
+        var disp = (show ? "inline" : "none");
+        if (obj.publishbtn != null) obj.publishbtn.css({"display":disp});
+        if (obj.unpublishbtn != null) obj.unpublishbtn.css({"display":disp});
+        if (obj.publishinfo != null) obj.publishinfo.css({"display":disp});
+      },
+
+      obj.publish = function(e) {
+        obj.checkLoggedIn();
+        obj.stopPropagation(e);
+        NFN.BasePage.PublishControlValue(mainProp.id);
+        obj.showPublishButtons(false);
+      },
+
+      obj.unpublish = function(e) {
+        obj.checkLoggedIn();
+        obj.stopPropagation(e);
+        if (confirm(attranslate("Är du säker på att du vill ångra ändringar och återgå till det senast publicerade värdet") + "?")) {
+          var response = NFN.BasePage.UnpublishControlValue(mainProp.id);
+          obj.setEditContent(response.value);
+          obj.setStaticContent(response.value);
+          obj.showPublishButtons(false);
+        }
+      },
+
+      obj.save = function(e, publish) {
+        obj.stopPropagation(e);
+        obj.checkLoggedIn();
+
+        mainProp.value = obj.getEnteredValue();
+        NFN.BasePage.SaveAjaxControl(mainProp.id, mainProp.value, publish);
+
+        obj.setStaticContent(mainProp.value);
+        obj.showPublishButtons(!publish);
+        obj.lockProperty(false);
+        obj.showEditor(false);
+        obj.isChanged = false;
+      },
+
+      obj.getEnteredValue = function() {
+        var val = "";
+        if (mainProp.controlType == "tiny") val = obj.getEnteredTinyValue();
+        else if (mainProp.controlType == "images") val = obj.getEnteredImageValue();
+        else if (mainProp.controlType == "text") val = obj.getEnteredTextValue();
+        else if (mainProp.controlType == "flash") val = obj.getEnteredFlashValue();
+        else if (mainProp.controlType == "movie") val = obj.getEnteredMovieValue();
+        return val;
+      },
+
+      obj.undo = function(e) {
+        obj.stopPropagation(e);
+        obj.checkLoggedIn();
+        obj.setEditContent(mainProp.value);
+        obj.lockProperty(false);
+        obj.showEditor(false);
+        obj.isChanged = false;
+      },
+
+      obj.setDimControl = function() {
+        var dim = obj.hiddenControl();
+        $("#" + tinyId + "_mce_tbl").css({"filter":(dim ? "alpha(opacity:40)" : ""), "KHTMLOpacity":(dim ? "0.4" : ""), "MozOpacity":(dim ? "0.4" : ""), "opacity":(dim ? "0.4" : "")});
+        obj.statdiv.css({"filter":(dim ? "alpha(opacity:40)" : ""), "KHTMLOpacity":(dim ? "0.4" : ""), "MozOpacity":(dim ? "0.4" : ""), "opacity":(dim ? "0.4" : "")});
+      },
+
+
+      obj.showPermissions = function(e) {
+        obj.stopPropagation(e);
+        var response = NFN.BasePage.GetRoles("dummy");
+        var res = response.value.split(';');
+        var roles = res[1].split('|');
+
+        obj.permroles.empty();
+
+        obj.permroles.append($("<p />").addClass("ajaxHeadline").html(attranslate("Roller")));
+        var aselect = $("<select />").attr({ "id":tinyId + "_rolelist"}).change(function() {obj.roleChanged(obj);});
+        obj.permroles.append(aselect);
+        aselect.append($("<option />").html("--" + attranslate("Välj roll") + "--" ));
+        for (var i=0; i < roles.length; i++)
+          aselect.append($("<option />").html(roles[i]));
+
+        obj.permroles.append(
+          $("<a />").attr({"href":"javascript:void(0)", "title":attranslate("Sätt standardbehörigheter för rollen")}).focus(function(){this.blur();}).click(function(e) {obj.defaultPermissions();}).css({"margin-left":"20px" }).append(
+            $("<img />").attr({"src":"admin/gfx/default.gif", "alt":attranslate("Sätt standardbehörigheter för rollen"), "border":"0" })
+          )
+        );
+
+        obj.permsettings.empty();
+        obj.permdiv.css({"display":"block"});
+      },
+
+      obj.highlight = function(hl) {
+        obj.statdiv.removeClass("highlightEdit").addClass((hl ? "highlightEdit" : ""));
+        obj.editbtndiv.css({"display":(hl ? "block" : "none")});
+      },
+
+      obj.defaultPermissions = function(e) {
+        obj.stopPropagation(e);
+        var idx = $("#" + tinyId + "_rolelist").get(0).selectedIndex;
+        if (idx == 0)
+          alert(attranslate("Välj roll"));
+        else {
+          var role = $("#" + tinyId + "_rolelist option:selected").val();
+          var response = NFN.BasePage.SetDefaultPermissions(mainProp.id, role);
+          obj.roleChanged($("#" + tinyId + "_rolelist").get(0));
+        }
+      },
+
+      obj.roleChanged = function(list) {
+        if (list.selectedIndex == 0) {
+          obj.permsettings.empty();
+        }
+        else {
+          var role = $(list).find("option:selected").val();
+          var response = NFN.BasePage.GetPermissionInfo(role, mainProp.id);
+
+          obj.permsettings.empty();
+          obj.permsettings.append($("<p />").addClass("ajaxHeadline").html(attranslate("Behörigheter")));
+          obj.permsettings.append(
+            $("<table />").attr({"cellSpacing":"0", "cellPadding":"0"}).append(
+              $("<tbody />")
+            )
+          );
+          var atbody = obj.permsettings.find("tbody:first");
+          for (var i=0; i < response.value.length; i++) {
+            var help = response.value[i].split('|');
+            var atr = $("<tr />");
+            atbody.append(atr);
+            atr.append($("<td />").html(help[0]));
+            atr.append($("<td />").append($("<input />").attr({"type":"checkbox", "checked":(help[2] == "y")}).click(function(e){obj.permClicked(e, role, help[1], obj.checked);})));
+          }
+        }
+      },
+
+      obj.permClicked = function(e, role, actiontype, permission) {
+        obj.stopPropagation(e);
+        NFN.BasePage.SetRichTextPermission(mainProp.id, role, actiontype, permission);
+      },
+
+      obj.getOnclickStr = function() {
+        var res = "";
+        var idx = $(obj).html().indexOf("onclick");
+        if (idx >= 0) {
+          res = $(obj).html().substring(idx + 9);
+          var idx2 = res.indexOf('"');
+          res = res.substring(0, idx2);
+        }
+        return res;
+      },
+
+
+
+      /******** Tiny methods ********/
+
+      obj.getRenderedTinyValue = function() {
+        return $(obj).html();
+      },
+
+      obj.getEnteredTinyValue = function() {
+        return obj.decodeScripts(obj.tinyInstance().getContent());
+      },
+
+      obj.setStaticTinyContent = function(value) {
+        var res = obj.replaceScripts(value);
+        obj.statdiv.html(res[0]);
+        if (res[1].length > 0)
+          eval(res[1]);
+      },
+
+      obj.codeScripts = function(val) {
+        return val.replace(/<script/g, "<div class='nfnscript'><!--<script").replace(/<\/script>/g, "nfn--></div>");
+      },
+
+      obj.decodeScripts = function(val) {
+        return val.replace(/<div class='nfnscript'><!--<script/g, "<script").replace(/nfn--><\/div>/g, "</script>");
+      },
+
+      obj.setEditTinyContent = function(value) {
+        if (!tinyIsReady) {
+          obj.initTiny(function(){obj.setEditContent(obj.codeScripts(value));});
+          return;
+        }
+        obj.tinyInstance().setContent(value);
+      },
+
+      obj.generateTinyDOM = function(callback) {
+
+        if (obj.hasPermission.edit) {
+
+          if (obj.hasPermission.isSysAdmin) {
+            obj.permdiv = obj.getPermdiv();
+            $(obj).before(obj.permdiv);
+          }
+
+          if (obj.hasPermission.show || obj.hasPermission.share || obj.hasPermission.restore || obj.hasPermission.datecontrol || obj.hasPermission.controltype || (obj.hasPermission.languageDependent && languages.length > 1)) {
+            obj.toolsdiv = obj.getToolsDiv();
+            $(obj).before(obj.toolsdiv);
+          }
+
+          obj.editbtndiv = obj.getEditbtndiv();
+          $(obj).before(obj.editbtndiv);
+        }
+
+        if (obj.hasPermission.edit) {
+          obj.statdiv.mouseover(function() {obj.highlight(true);});
+          obj.statdiv.mouseout(function() {obj.highlight(false);});
+
+          obj.editdiv = $("<div />").css({ "display":"none", "position":"relative", "left":"-1px", "top":"-1px" });
+          obj.editdiv.append($("<div />").attr("id",tinyId + "_mce").addClass("AjaxTinyEdit").html(obj.codeScripts(mainProp.value) ));
+          $(obj).after(obj.editdiv);
+        }
+
+        obj.setDimControl();
+
+        //setTimeout(function(){obj.whenDomLoaded(callback);}, 500);
+        obj.whenDomLoaded(callback);
+      },
+
+      obj.whenDomLoaded = function(callback) {
+        $(obj).append(obj.maindiv);
+        if (callback) callback();
+      },
+
+      obj.replaceScripts = function(aval) {
+        var re = new RegExp(/<script\b[^>]*>(.*?)<\/script>/);
+        var scripts = "";
+        var s = re.exec(aval);
+        var count = 0;
+        while (s && count < 100) {
+          var ascript = s[0].substring(31, s[0].length-9);
+          ascript = ascript.replace(/writeFlash\(/g, "ac_writeFlash('_fs" + tinyId + count + "_',");
+          ascript = ascript.replace(/writeShockWave\(/g, "ac_writeShockWave('_fs" + tinyId + count + "_',");
+          ascript = ascript.replace(/writeQuickTime\(/g, "ac_writeQuickTime('_fs" + tinyId + count + "_',");
+          ascript = ascript.replace(/writeRealMedia\(/g, "ac_writeRealMedia('_fs" + tinyId + count + "_',");
+          ascript = ascript.replace(/writeWindowsMedia\(/g, "ac_writeWindowsMedia('_fs" + tinyId + count + "_',");
+          scripts += ascript;
+          aval = aval.replace(s[0], "<span id='_fs" + tinyId + count + "_'></span>");
+          count++;
+          s = re.exec(aval);
+        }
+        return [aval, scripts];
+      },
+
+      obj.tinyInstance = function() {
+        return tinyMCE.editors[tinyId + "_mce"];
+      },
+
+      obj.getToolbars = function() {
+        var res = null;
+        if (settings.toolbarItems.length == 0) {
+          if (settings.toolbarConfig == "empty") {
+            settings.toolbarItems = "";
+            if (obj.hasPermission.isSysAdmin) settings.toolbarItems += "Advanced";
+          }
+          else if (settings.toolbarConfig == "simple") {
+            settings.toolbarItems = "Character;Link;Undo;DocumentBank";
+            if (obj.hasPermission.isSysAdmin) settings.toolbarItems += ";Advanced";
+          }
+          else if (settings.toolbarConfig == "standard") {
+            settings.toolbarItems = "Paragraph;Character;Css;Justify;Paste;Undo;Link;DocumentBank;HtmlTemplates,InsertHtml";
+            if (obj.hasPermission.isSysAdmin) settings.toolbarItems += ";Advanced";
+          }
+          else if (settings.toolbarConfig == "extended") {
+            settings.toolbarItems = "Paragraph;Css;Character;Justify;Paste;Undo;Link;DocumentBank;Media;HtmlTemplates;InsertHtml;List;TableExtended;Layer;Style;Advanced";
+          }
+          else if (settings.toolbarConfig == "advanced") {
+            settings.toolbarItems = "Paragraph;Font;Css;CharacterExtended;Color;Justify;Paste;Undo;Link;DocumentBank;Media;HtmlTemplates;InsertHtml;List;Indent;TableExtended;Style;Layer;Zoom;Special;Advanced";
+          }
+          else if (settings.toolbarConfig == "full") {
+            settings.toolbarItems = "Paragraph;Font;Css;CharacterExtended;Color;Justify;Paste;Undo;Search;Link;DocumentBank;Media;HtmlTemplates;InsertHtml;List;Indent;TableExtended;Style;Layer;Zoom;SpecialExtended;Advanced";
+          }
+        }
+        return settings.toolbarItems;
+      },
+
+
+      obj.getTools = function() {
+
+        function addItem(s, item) {
+          if (s.length > 0) s += ",separator,";
+          s += item;
+          return s;
+        }
+
+        var s = "save";
+        if (obj.hasPermission.publish) s += ",savepublish";
+        s += ",cancel";
+
+        var tbstr = obj.getToolbars();
+        var tb = tbstr.split(';');;
+        for (var i=0; i < tb.length; i++) {
+          if (tb[i] == "Paragraph" && obj.hasPermission.Paragraph) s = addItem(s, "formatselect");
+          else if (tb[i] == "Font" && obj.hasPermission.Font) s = addItem(s, "fontselect,fontsizeselect");
+          else if (tb[i] == "Css" && obj.hasPermission.Css && styles.length > 0 ) s = addItem(s, "styleselect");
+          else if (tb[i] == "Character" && tbstr.indexOf("CharacterExtended") < 0 && obj.hasPermission.Character) s = addItem(s, "bold,italic");
+          else if (tb[i] == "CharacterExtended" && obj.hasPermission.CharacterExtended) s = addItem(s, "bold,italic,underline,strikethrough,sub,sup");
+          else if (tb[i] == "Color" && obj.hasPermission.Color) s = addItem(s, "forecolor,backcolor");
+          else if (tb[i] == "Justify" && obj.hasPermission.Justify) s = addItem(s, "justifyleft,justifycenter,justifyright,justifyfull");
+          else if (tb[i] == "Paste" && tbstr.indexOf("PasteExtended") < 0 && obj.hasPermission.Paste) s = addItem(s, "cut,copy,paste");
+          else if (tb[i] == "PasteExtended" && obj.hasPermission.PasteExtended) s = addItem(s, "cut,copy,paste,pastetext,pasteword,selectall");
+          else if (tb[i] == "Undo" && obj.hasPermission.Undo) s = addItem(s, "undo,redo");
+          else if (tb[i] == "Search" && obj.hasPermission.Search) s = addItem(s, "search,replace");
+          else if (tb[i] == "Link" && obj.hasPermission.Link) s = addItem(s, "link,unlink,anchor");
+          else if (tb[i] == "DocumentBank" && obj.hasPermission.DocumentBank) s = addItem(s, "docbank,image");
+          else if (tb[i] == "Media" && obj.hasPermission.Media) s = addItem(s, "media");
+          else if (tb[i] == "HtmlTemplates" && obj.hasPermission.HtmlTemplates && htmlTemplates && htmlTemplates.length > 0) s = addItem(s, "template");
+          else if (tb[i] == "InsertHtml" && obj.hasPermission.InsertHtml) s = addItem(s, "inserthtml");
+          else if (tb[i] == "List" && obj.hasPermission.List) s = addItem(s, "bullist,numlist");
+          else if (tb[i] == "Indent" && obj.hasPermission.Indent) s = addItem(s, "outdent,indent");
+          else if (tb[i] == "Table" && tbstr.indexOf("TableExtended") < 0 && obj.hasPermission.Table) s = addItem(s, "table,delete_col,delete_row,col_after,col_before,row_after,row_before");
+          else if (tb[i] == "TableExtended" && obj.hasPermission.TableExtended) s = addItem(s, "table,row_props,cell_props,delete_col,delete_row,col_after,col_before,row_after,row_before,split_cells,merge_cells");
+          else if (tb[i] == "Style" && obj.hasPermission.Style) s = addItem(s, "styleprops,removeformat");
+          else if (tb[i] == "Layer" && obj.hasPermission.Layer) s = addItem(s, "insertlayer,moveforward,movebackward,absolute");
+          else if (tb[i] == "Zoom" && obj.hasPermission.Zoom) s = addItem(s, "zoom");
+          else if (tb[i] == "Special" && tbstr.indexOf("SpecialExtended") < 0 && obj.hasPermission.Special) s = addItem(s, "hr,charmap");
+          else if (tb[i] == "SpecialExtended" && obj.hasPermission.SpecialExtended) s = addItem(s, "hr,charmap,emotions,insertdate,insterttime,nonbreaking");
+          else if (tb[i] == "Advanced" && obj.hasPermission.Advanced) s = addItem(s, "cleanup,code");
+        }
+        return s;
+      },
+
+
+      obj.getPlugins = function(tools) {
+        var plugins = "inlinepopups";
+        if (tools.length > 0) plugins += ",contextmenu";
+        if (tools.indexOf("styleprops") >= 0) plugins += ",style";
+        if (tools.indexOf("insertlayer") >= 0) plugins += ",layer";
+        if (tools.indexOf("table") >= 0) plugins += ",table";
+        if (tools.indexOf("template") >= 0) plugins += ",template";
+        if (tools.indexOf("zoom") >= 0) plugins += ",zoom";
+        if (tools.indexOf("link") >= 0) plugins += ",advlink";
+        if (tools.indexOf("image") >= 0) plugins += ",advimage";
+        if (tools.indexOf("emotions") >= 0) plugins += ",emotions";
+        if (tools.indexOf("insertdate") >= 0) plugins += ",insertdatetime";
+        if (tools.indexOf("paste") >= 0) plugins += ",paste";
+        if (tools.indexOf("search") >= 0) plugins += ",searchreplace";
+        if (tools.indexOf("nonbreaking") >= 0) plugins += ",nonbreaking";
+        if (tools.indexOf("media") >= 0) plugins += ",media";
+        if (tools.indexOf("inserthtml") >= 0) plugins += ",inserthtml";
+        if (tools.indexOf("bullist") >= 0 || tools.indexOf("numlist") >= 0) plugins += ",advlist";
+        return plugins;
+      },
+
+      obj.initTiny = function(callback) {
+        var tools = obj.getTools();
+        var plugins = obj.getPlugins(tools);
+
+        if (settings.useZipTiny) {
+          tinyMCE_GZ.init({
+            plugins : plugins,
+            themes : 'advanced',
+            languages : 'en',
+            disk_cache : true,
+            debug : false
+          });
+        }
+
+        obj.tinyConfigs = {
+          mode:'exact',
+          relative_urls:settings.relativeUrls,
+          remove_script_host : false,
+          document_base_url : settings.baseUrl,
+          convert_urls:settings.convertUrls,
+          theme:'advanced',
+          language:language,
+          init_instance_callback : function(inst) { obj.initTinyDone(callback); },
+          content_css:settings.css,
+          width:settings.width,
+          height:settings.height,
+          plugins:plugins,
+          debug:settings.debug,
+          media_use_script:false,
+          force_p_newlines: settings.force_p_newlines,
+          invalid_elements: settings.invalid_elements,
+          extended_valid_elements:settings.validElements,
+          strict_loading_mode : false,
+          theme_advanced_toolbar_location: settings.toolbarLocation,
+          theme_advanced_containers_default_align:'left',
+          theme_advanced_buttons1:tools,
+          theme_advanced_buttons2:"",
+          theme_advanced_buttons3:"",
+          theme_advanced_styles:styles,
+          template_templates: htmlTemplates,
+          file_browser_callback:function(field_name, url, type, win) { obj.openDocumentBank(field_name, url, type, win); },
+          setup : function(ed) {
+            ed.addButton('save', {
+              title:attranslate("Spara ändringar"),
+              image:'admin/tinymce/gfx/save.gif',
+              onclick:function(e){ obj.save(e,false); }
+            });
+            ed.addButton('savepublish', {
+              title:attranslate("Spara och publicera ändringar"),
+              image:'admin/tinymce/gfx/savepublish.gif',
+              onclick:function(e){ obj.save(e,true); }
+            });
+            ed.addButton('cancel', {
+              title:attranslate("Ångra ändringar"),
+              image:'admin/tinymce/gfx/cancel.gif',
+              onclick:function(e){ obj.undo(e); }
+            });
+            ed.onPaste.add(function(ed, e, o) {
+              ed.execCommand('mcePasteText', true);
+              return tinymce.dom.Event.cancel(e);
+            });
+          }
+        }
+        $("#" + tinyId + "_mce").tinymce(obj.tinyConfigs);
+      },
+
+
+      obj.initTinyDone = function(callback) {
+        var atable = $("#" + tinyId + "_mce_toolbar1");
+        var tds = atable.children().children().children("td");
+        //var adiv = $("<div />").css({"width":settings.width});
+        var adiv = $("<div />");
+
+        tds.each(function(i) {
+          adiv.append(
+            $("<div />").css("float","left").append(
+              $(this).remove()
+            )
+          );
+        });
+        adiv.append(
+          $("<div />").addClass('clearfloat')
+        );
+        atable.parent().append(adiv);
+        atable.remove();
+
+        if (settings.toolbarLocation == "external" && settings.draggableToolbar) {
+          $('#' + tinyId + "_mce_external").bind('drag',function( event ){
+            $( this ).css({
+              "top": event.offsetY,
+              "left": event.offsetX
+            });
+          });
+        }
+
+        tinyIsReady = true;
+        callback();
+      },
+
+      obj.getHtmlTemplates = function() {
+        var response = NFN.BasePage.GetHtmlTemplates();
+        if (response.error) return [];
+        var res = new Array(response.value.length);
+        for (var i=0; i < response.value.length; i++) {
+          var vals = response.value[i].split('|');
+          res[i] = {title:vals[0], src:vals[1], description:vals[2]};
+        }
+        return res;
+      },
+
+      obj.openDocumentBank = function(field_name, url, type, win) {
+        tinyMCE.activeEditor.windowManager.open({
+          file : "/admin/DocumentBank/DocumentBank.aspx?fromtiny=y&maxwidth=" + String(parseInt(settings.width)-4),
+          title : attranslate('Mediabank'),
+          width : 900,
+          height : 600,
+          resizable : "yes",
+          inline : "yes",
+          close_previous : "yes"
+        },
+        {
+          window : win,
+          input : field_name,
+          allowedtype : type
+        });
+        return false;
+      },
+
+
+
+      /******** Text methods ********/
+
+      obj.getRenderedTextValue = function() {
+        var a = $(obj).find("a");
+        if (a.length > 0) {
+          if (a.attr("href").indexOf("javascript") == 0)
+            return a.html() + "|" + obj.getOnclickStr() + "||js";
+          else
+            return a.html() + "|" + a.attr("href") + "|" + a.attr("target") + "|href";
+        }
+        else
+          return $(obj).html() + "|||";
+      },
+
+      obj.getEnteredTextValue = function() {
+        return obj.textinput.val().replace(/\n/g, "<br />") + "|" + obj.hrefinput.val().replace(/"/g,"'") + "|" + obj.targetdd.val() + "|" + (obj.linktypecb.attr("checked") ? "js" : "href"); //"
+      },
+
+      obj.setStaticTextContent = function(value) {
+        var valsarr = value.split('|');
+        var txt = valsarr[0];
+        var href = (valsarr.length > 1 ? valsarr[1] : "");
+        var target = (valsarr.length > 2 ? valsarr[2] : "_self");
+        var ltype = (valsarr.length > 3 ? valsarr[3] : "href");
+
+        $(obj).empty();
+        if (href.length > 0) {
+          var a = $("<a />").focus(function(){this.blur();}).html(txt);
+          if (ltype == "js") a.attr({"href":"javascript:void(0)", "onclick":href});
+          else a.attr({"href":href, "target":target});
+          $(obj).append(a);
+        }
+        else
+          $(obj).html(txt);
+      },
+
+      obj.setEditTextContent = function(value) {
+        var valsarr = value.split('|');
+        obj.textinput.val(valsarr[0].replace(/<br \/>/g, "\n").replace(/<br>/g, "\n"));
+        obj.hrefinput.val(valsarr.length > 1 ? valsarr[1] : "");
+        obj.targetdd.val(valsarr.length > 2 ? valsarr[2] : "");
+        var lt = (valsarr.length > 3 ? valsarr[3] : "href");
+        obj.linktypecb.attr("checked", lt == "js");
+      },
+
+      obj.generateTextDOM = function(callback) {
+
+        if (obj.hasPermission.edit) {
+
+          if (obj.hasPermission.isSysAdmin) {
+            obj.permdiv = obj.getPermdiv();
+            $(obj).before(obj.permdiv);
+          }
+          if (obj.hasPermission.show || obj.hasPermission.share || obj.hasPermission.restore || obj.hasPermission.datecontrol || obj.hasPermission.controltype || (obj.hasPermission.languageDependent && languages.length > 1)) {
+            obj.toolsdiv = obj.getToolsDiv();
+            $(obj).before(obj.toolsdiv);
+          }
+
+          obj.editbtndiv = obj.getEditbtndiv();
+          $(obj).before(obj.editbtndiv);
+        }
+
+        if (obj.hasPermission.edit) {
+          obj.statdiv.mouseover(function() {obj.highlight(true);});
+          obj.statdiv.mouseout(function() {obj.highlight(false);});
+
+          if (settings.textmode == "multiline")
+            obj.textinput = $("<textarea />").attr("id",$(obj).attr("id") + "textinput").css({"width":String(settings.width)+"px", "height":String(settings.height)+"px"});
+          else
+            obj.textinput = $("<input />").attr({"id":$(obj).attr("id") + "textinput", "type":"text"}).css("width",String(settings.width) + "px");
+          obj.hrefinput = $("<input />").attr("type","text").css("width","200px");
+          obj.linktypecb = $("<input />").attr("type","checkbox");
+          obj.targetdd = $("<select />").append(
+            $("<option />").attr("value", "_self").html("Samma fönster")
+          ).append(
+            $("<option />").attr("value", "_blank").html("Nytt fönster")
+          );
+          obj.setEditTextContent(mainProp.value);
+
+          obj.textinput.css({
+            "font-family":$(obj).css("font-family"),
+            "font-size":$(obj).css("font-size"),
+            "font-weight":$(obj).css("font-weight"),
+            "color":$(obj).css("color"),
+            "line-height":$(obj).css("line-height"),
+            "text-transform":$(obj).css("text-transform"),
+            "background":"transparent",
+            "border":"none"
+          });
+
+          obj.editdiv = $("<div />").addClass("_txtEdit").append(
+            $("<div />").addClass("_ajaxControls").addClass("_txtControls").append(obj.getSaveButtons(true, false))
+          ).append(
+            $("<div />").append(obj.textinput)
+          );
+
+          $(obj).before(obj.editdiv);
+        }
+
+        obj.setDimControl();
+
+        if (callback) callback();
+      },
+
+
+
+
+      /******** Images methods ********/
+
+      obj.getImgsValueString = function(imgs) {
+        var res = "";
+        for (var i=0; i < imgs.length; i++) {
+          if (res.length > 0) res += ";";
+          res += imgs[i].src + "|" + imgs[i].alt + "|" + imgs[i].href + "|" + imgs[i].target + "|" + imgs[i].effect + "|" + imgs[i].timeout + "|" + (imgs[i].js ? "js" : "href") + "|" + imgs[i].width + "|" + imgs[i].height;
+        }
+        return res;
+      },
+
+      obj.getImgsData = function(value) {
+        var images = value.split(';');
+        var res = new Array();
+        for (var i=0; i < images.length; i++) {
+          var vals = images[i].split('|');
+          if (vals[0].length > 0) {
+            var aimg = new Object();
+            aimg.src = vals[0];
+            aimg.alt = (vals.length > 1 ? vals[1] : "");
+            aimg.href = (vals.length > 2 ? vals[2] : "");
+            aimg.target = (vals.length > 3 ? vals[3] : "_self");
+            aimg.effect = (vals.length > 4 ? vals[4] : "fade");
+            aimg.timeout = (vals.length > 5 ? vals[5] : "4000");
+            aimg.js = (vals.length > 6 ? (vals[6] == "js") : false);
+            aimg.width = (vals.length > 7 ? vals[7] : "");
+            aimg.height = (vals.length > 8 ? vals[8] : "");
+            res.push(aimg);
+          }
+        }
+        return res;
+      },
+
+      obj.getRenderedImagesValue = function() {
+        var imgs = new Array();
+        $(obj).find(".ajaximagesimages").children().each(function(){
+          var a = (this.tagName == "A" ? $(this) : null);
+          var img = (a ? $(this).find("img") : $(this));
+          var aimg = new Object();
+          aimg.src = img.attr("src");
+          aimg.alt = img.attr("alt");
+          aimg.js = (a ? (a.attr("href").indexOf("javascript") == 0) : false);
+          aimg.href = (a ? (aimg.js ? obj.getOnclickStr() : a.attr("href")) : "");
+          aimg.target = (a ? a.attr("target") : "_self");
+          aimg.width = img.width();
+          aimg.height = img.height();
+          imgs.push(aimg);
+        });
+        $(obj).find(".ajaximagesdata").children().each(function(i){
+          var vals = $(this).html().split('|');
+          imgs[i].effect = vals[0];
+          imgs[i].timeout = vals[1];
+        });
+        return obj.getImgsValueString(imgs);
+      },
+
+      obj.getEnteredImageValue = function() {
+        var imgs = new Array();
+        obj.imgtable.find("tr").each(function(i){
+          if (i > 0) {
+            var aimg = new Object();
+            $(this).find("td").each(function(j){
+              if (j == 1) {
+                aimg.src = $(this).children(":first-child").val();
+                aimg.width = $(this).children(":nth-child(2)").val();
+                aimg.height = $(this).children(":nth-child(3)").val();
+              }
+              else if (j == 2) aimg.alt = $(this).children(":first-child").val();
+              else if (j == 3) aimg.href = $(this).children(":first-child").val();
+              else if (j == 4) aimg.js = $(this).children(":first-child").attr("checked");
+              else if (j == 5) aimg.target = $(this).children(":first-child").val();
+              else if (j == 6) aimg.effect = $(this).children(":first-child").val();
+              else if (j == 7) aimg.timeout = $(this).children(":first-child").val();
+            });
+            imgs.push(aimg);
+          }
+        });
+        return obj.getImgsValueString(imgs);
+      },
+
+      obj.setStaticImagesContent = function(value) {
+        $(obj).find(".ajaximagesimages").remove();
+        $(obj).find(".ajaximagesdata").remove();
+        var imgdiv = $("<div />").addClass("ajaximagesimages");
+        var datadiv = $("<div />").css("display","none").addClass("ajaximagesdata");
+        $(obj).append(imgdiv).append(datadiv);
+        var imgdata = obj.getImgsData(value);
+        $(obj).css("margin",(imgdata.length == 0 ? "0" : ""));
+        for (var i=0; i < imgdata.length; i++) {
+          var img = $("<img />").attr({"src":imgdata[i].src, "alt":imgdata[i].alt, "border":"0"});
+          if (imgdata[i].width.length > 0) img.attr("width",imgdata[i].width);
+          if (imgdata[i].height.length > 0) img.attr("height",imgdata[i].height);
+          if (imgdata[i].href.length > 0) {
+            var a = $("<a />").focus(function(){this.blur();}).append(img);
+            if (imgdata[i].js) a.attr({"href":"javascript:void(0)", "onclick":imgdata[i].href});
+            else a.attr({"href":imgdata[i].href, "target":imgdata[i].target});
+            imgdiv.append(a);
+          }
+          else
+            imgdiv.append(img);
+          datadiv.append($("<span />").html(imgdata[i].effect + "|" + imgdata[i].timeout));
+        }
+        obj.initCycle();
+      },
+
+      obj.setEditImagesContent = function(value) {
+        try {
+
+          obj.imgtable.children(":first-child").empty().append(
+            $("<tr />").append(
+              $("<td />")).append($("<td />").html(attranslate("Bild"))).append($("<td />").html(attranslate("Alttext"))).append($("<td />").html(attranslate("Länk"))).append($("<td />").html(attranslate("JS"))).append($("<td />").html(attranslate("Länkmål"))).append($("<td />").html(attranslate("Effekt"))).append($("<td />").html(attranslate("Fördröjning"))
+            )
+          );
+          obj.imgtable.find("td").css("font-weight","bold");
+
+
+          var imgdata = obj.getImgsData(value);
+          for (var i=0; i < imgdata.length; i++) {
+            obj.imgtable.children(":first-child").append(
+              obj.getImgTableRow(i, imgdata[i])
+            );
+          }
+        }
+        catch(e){
+          alert(e.message);
+        }
+      },
+
+      obj.slideTimeout = function(currElement, nextElement, opts, isForward) {
+        var idx = opts.currSlide;
+        var vals = obj.slideeffects.timeout.split(',');
+        return parseInt(vals[idx]);
+      },
+
+      obj.initCycle = function() {
+
+        if ($(obj).find(".ajaximagesimages").children().length > 1) {
+          obj.slideeffects = {
+            effect:"",
+            timeout:""
+          };
+          $(obj).find(".ajaximagesdata").children().each(function(){
+            var vals = $(this).html().split('|');
+            if (obj.slideeffects.effect.length > 0) {
+              obj.slideeffects.effect += ",";
+              obj.slideeffects.timeout += ",";
+            }
+            obj.slideeffects.effect += vals[0];
+            obj.slideeffects.timeout += vals[1];
+          });
+          if (settings.manualCycling) {
+            if (obj.navigator) obj.navigator.remove();
+            obj.leftThumb = 1;
+            var navid = $(obj).attr("id")+'navigator';
+            if (settings.pagerNavigator) obj.navigator = settings.pagerNavigator(navid);
+            else obj.navigator = obj.buildNavigator(navid);
+            $(obj).find(".ajaximagesimages").after(obj.navigator).cycle({
+              fx:obj.slideeffects.effect,
+              timeout: 0,
+              pager:  '#' + navid,
+              pagerAnchorBuilder:(settings.pagerAnchorBuilder ? settings.pagerAnchorBuilder : obj.buildNavigateAnchors)
+            });
+          }
+          else {
+            $(obj).find(".ajaximagesimages").cycle({
+              fx:obj.slideeffects.effect,
+              speed:settings.cyclespeed,
+              timeoutFn:obj.slideTimeout
+            });
+          }
+        }
+      },
+
+      obj.buildNavigator = function(id) {
+        var nav = $("<div />").addClass("acnavigator").append($("<table />").css("position","relative").attr({"cellpadding":"0","cellspacing":"0"}).append($("<tr />").attr("id",id)))
+        return $("<div />").append(
+          $("<div />").addClass("acnavleft").click(function(){obj.thumbNavigate(nav, 'left');})
+        ).append(nav).append(
+          $("<div />").addClass("acnavright").click(function(){obj.thumbNavigate(nav, 'right');})
+        ).append(
+          $("<div />").addClass("clearfloat")
+        );
+      },
+
+      obj.buildNavigateAnchors = function(idx, elem) {
+        if (settings.cycleThumbs)
+          return "<td><a href='#'><img src='" + elem.src + "' width='" + settings.thumbWidth + "' style='margin-right:" + settings.thumbSpacing + "px' border='0' /></a></td>";
+        else
+          return "<td><a href='#'>" + String(idx+1) + "</a></td>";
+      },
+
+      obj.thumbNavigate = function(nav, dir) {
+        var tbl = nav.children("table:first-child");
+        if (tbl.width() > nav.width()) {
+          var nof = tbl.find("td").length;
+          if (dir == 'left' && obj.leftThumb > 1) {
+            obj.leftThumb--;
+            tbl.animate({left:-(obj.leftThumb-1)*(settings.thumbWidth+2*settings.thumbSpacing)});
+          }
+          else if (dir == 'right' && obj.leftThumb < nof && tbl.width()+parseInt(tbl.css("left")) > nav.width()) {
+            obj.leftThumb++;
+            tbl.animate({left:-(obj.leftThumb-1)*(settings.thumbWidth+2*settings.thumbSpacing)});
+          }
+        }
+      },
+
+
+      obj.generateImageDOM = function(callback) {
+
+        if (obj.hasPermission.edit) {
+
+          if (obj.hasPermission.isSysAdmin) {
+            obj.permdiv = obj.getPermdiv();
+            $(obj).prepend(obj.permdiv);
+          }
+          if (obj.hasPermission.show || obj.hasPermission.share || obj.hasPermission.restore || obj.hasPermission.datecontrol || obj.hasPermission.controltype || (obj.hasPermission.languageDependent && languages.length > 1)) {
+            obj.toolsdiv = obj.getToolsDiv();
+            $(obj).prepend(obj.toolsdiv);
+          }
+
+          obj.editbtndiv = obj.getEditbtndiv();
+          $(obj).prepend(obj.editbtndiv);
+
+          obj.statdiv.mouseover(function() {obj.highlight(true);});
+          obj.statdiv.mouseout(function() {obj.highlight(false);});
+
+          obj.imgtable = $("<table />").attr("id",$(obj).attr("id")+"imgtable").append($("<tbody />"));
+          obj.editdiv = $("<div />").addClass("_ajaxControls").append(
+            obj.getSaveButtons(false, true)
+          ).append(
+            obj.imgtable
+          );
+          $(obj).prepend(obj.editdiv);
+          obj.setEditImagesContent(mainProp.value);
+        }
+
+        obj.setDimControl();
+
+        if (callback) callback();
+      },
+
+      obj.newImage = function() {
+        var imgdata = {
+          src:"",
+          alt:"",
+          href:"",
+          js:false,
+          target:"_self",
+          effect:"fade",
+          timeout:4000,
+          width:"",
+          height:""
+        }
+        var idx = obj.imgtable.find("tr").length-1;
+        obj.imgtable.children(":first-child").append(
+          obj.getImgTableRow(idx, imgdata)
+        );
+      },
+
+
+      obj.getImgTableRow = function(i, imgdata) {
+
+        function getOption(value) {
+          return $("<option />").attr({"value":value,"selected":(value == imgdata.effect)}).html(attranslate(value));
+        }
+
+        var thumb = "/admin/jstools/jquery/plugins/ajaxcontrol/newimg.gif";
+        if (imgdata.src.length > 0)
+          thumb = "/admin/DocumentBank/thumbnail.aspx?image=" + imgdata.src + "&width=50&heigh=50";
+
+        var tdd = $("<select>").append(
+          $("<option />").attr({"value":"_self","selected":(imgdata.target == "_self")}).html(attranslate("Samma fönster"))
+        ).append(
+          $("<option />").attr({"value":"_blank","selected":(imgdata.target == "_blank")}).html(attranslate("Nytt fönster"))
+        );
+
+        var edd = $("<select>").append(getOption("blindX")).append(getOption("blindY")).append(getOption("blindZ")).append(getOption("cover")).append(getOption("curtainX")).append(getOption("curtainY")).append(getOption("fade")).append(getOption("fadeZoom")).append(getOption("growX")).append(getOption("growY")).append(getOption("none")).append(getOption("scrollUp")).append(getOption("scrollDown")).append(getOption("scrollLeft")).append(getOption("scrollRight")).append(getOption("scrollHorz")).append(getOption("scrollVert")).append(getOption("shuffle")).append(getOption("slideX")).append(getOption("slideY")).        append(getOption("toss")).append(getOption("turnUp")).append(getOption("turnDown")).append(getOption("turnLeft")).append(getOption("turnRight")).append(getOption("uncover")).append(getOption("wipe")).append(getOption("zoom"));
+
+        var atr =
+          $("<tr />").append(
+            $("<td />").append(
+              $("<a />").attr("href","javascript:void(0)").click(function(){
+                obj.delImgRow(this);
+              }).append(
+                $("<img />").attr({"src":"/admin/gfx/delete.gif", "alt":"Ta bort bild", "border":"0"})
+              )
+            )
+          ).append(
+            $("<td />").append(
+              $("<input />").attr("type","hidden").val(imgdata.src)
+            ).append(
+              $("<input />").attr("type","hidden").val(imgdata.width)
+            ).append(
+              $("<input />").attr("type","hidden").val(imgdata.height)
+            ).append(
+              $("<a />").attr("href","javascript:void(0)").click(function(e){
+                cycleOpenMediaBank($(obj).attr("id") + "|" + i, $(obj).parent().width());
+              }).append(
+                $("<img />").attr({"border":"0","src":thumb})
+              )
+            )
+          ).append(
+            $("<td />").append($("<input />").attr("type","text").css("width","100px").val(imgdata.alt))
+          ).append(
+            $("<td />").append($("<input />").attr("type","text").css("width","100px").val(imgdata.href))
+          ).append(
+            $("<td />").append($("<input />").attr({"type":"checkbox","checked":imgdata.js}))
+          ).append(
+            $("<td />").append(tdd)
+          ).append(
+            $("<td />").append(edd)
+          ).append(
+            $("<td />").append(
+              $("<input />").attr("type","text").css("width","50px").val(imgdata.timeout)
+            )
+          );
+
+        return atr;
+      },
+
+      obj.delImgRow = function(a) {
+        if (confirm(attranslate("Vill du ta bort bilden?")))
+          $(a).parent().parent().remove();
+      },
+
+
+
+
+      /******** Flash methods ********/
+
+      obj.getRenderedFlashValue = function() {
+        return $(obj).find("div.nfnflashparams").html();
+      },
+
+      obj.getEnteredFlashValue = function() {
+        return obj.flashurl.val() + "|" + obj.flashwidth.val() + "|" + obj.flashheight.val() + "|" + (obj.flashplay.attr("checked") ? "1" : "0") + "|" + (obj.flashloop.attr("checked") ? "1" : "0");
+      },
+
+      obj.setStaticFlashContent = function(value) {
+        $(obj).empty();
+        $(obj).append(
+          $("<div />").addClass("nfnflashparams").css("display","none").html(value)
+        );
+        if (value.length > 0) obj.initFlash();
+      },
+
+      obj.setEditFlashContent = function(value) {
+        var vals = value.split('|');
+        obj.flashurl.val(vals[0]);
+        obj.flashwidth.val(vals.length > 1 ? vals[1] : "100");
+        obj.flashheight.val(vals.length > 2 ? vals[2] : "100");
+        obj.flashplay.attr("checked",(vals.length > 3 ? vals[3]=="1" : true));
+        obj.flashloop.attr("checked",(vals.length > 4 ? vals[4]=="1" : true));
+      },
+
+      obj.generateFlashDOM = function(callback) {
+
+        if (obj.hasPermission.edit) {
+
+          if (obj.hasPermission.isSysAdmin) {
+            obj.permdiv = obj.getPermdiv();
+            $(obj).before(obj.permdiv);
+          }
+          if (obj.hasPermission.show || obj.hasPermission.share || obj.hasPermission.restore || obj.hasPermission.datecontrol || obj.hasPermission.controltype || (obj.hasPermission.languageDependent && languages.length > 1)) {
+            obj.toolsdiv = obj.getToolsDiv();
+            $(obj).before(obj.toolsdiv);
+          }
+
+          obj.editbtndiv = obj.getEditbtndiv();
+          $(obj).before(obj.editbtndiv);
+        }
+
+        if (obj.hasPermission.edit) {
+          obj.statdiv.mouseover(function() {obj.highlight(true);});
+          obj.statdiv.mouseout(function() {obj.highlight(false);});
+
+          obj.flashurl = $("<input />").attr({"id":$(obj).attr("id") + "_flashurl", "type":"text"}).css("width","200px");
+          obj.flashwidth = $("<input />").attr("type","text").css("width","40px");
+          obj.flashheight = $("<input />").attr("type","text").css("width","40px");
+          obj.flashplay = $("<input />").attr("type","checkbox");
+          obj.flashloop = $("<input />").attr("type","checkbox");
+          obj.setEditFlashContent(mainProp.value);
+
+          obj.editdiv = $("<div />").addClass("_ajaxControls").append(
+            $("<div />").append(obj.getSaveButtons(false, false))
+          ).append(
+            $("<table />").append(
+              $("<tr />").append($("<td />").html("<b>" + attranslate("Flash-url") + "</b>")).append($("<td />")).append($("<td />").html("<b>" + attranslate("Bredd") + "</b>")).append($("<td />").html("<b>" + attranslate("Höjd") + "</b>")).append($("<td />").html("<b>" + attranslate("Play") + "</b>")).append($("<td />").html("<b>" + attranslate("Loop") + "</b>"))
+            ).append(
+              $("<tr />").append(
+                $("<td />").append(obj.flashurl)
+              ).append(
+                $("<td />").append(
+                  $("<a />").attr("href","javascript:void(0)").focus(function(){this.blur();}).click(function(){flashOpenMediaBank($(obj).attr("id"));}).append(
+                    $("<img />").attr({"src":"admin/gfx/documentbank.gif", "title":attranslate("Öppna mediabanken"), "border":"0"})
+                  )
+                )
+              ).append($("<td />").append(obj.flashwidth)).append($("<td />").append(obj.flashheight)).append($("<td />").append(obj.flashplay)).append($("<td />").append(obj.flashloop))
+            )
+          );
+
+          $(obj).before(obj.editdiv);
+        }
+
+        obj.setDimControl();
+
+        if (callback) callback();
+      },
+
+      obj.initFlash = function() {
+        obj.flashdiv = $("<div />").attr("id",$(obj).attr("id") + "_flashdiv");
+        $(obj).append(obj.flashdiv);
+
+        var vals = $(obj).find("div.nfnflashparams").html().split('|');
+
+        var url = vals[0];
+        var width = (vals.length > 1 ? parseInt(vals[1]) : 200);
+        if (isNaN(width)) width = 200;
+        var height = (vals.length > 2 ? parseInt(vals[2]) : 200);
+        if (isNaN(height)) height = 200;
+        var play = (vals.length > 3 ? vals[3] : "1");
+        play = (play == "1" ? true : (play == "0" ? false : true));
+        var loop = (vals.length > 4 ? vals[4] : "1");
+        loop = (loop == "1" ? true : (loop == "0" ? false : true));
+
+        $(obj).css({"width":width, "height":height})
+
+        var params = {
+          bgcolor:settings.flashbg,
+          play:play,
+          loop:loop,
+          quality:"high",
+          wmode:"transparent",
+          version:"9.0.0"
+        };
+
+        var flashvars = {};
+        swfobject.embedSWF(url, $(obj).attr("id") + "_flashdiv", String(width), String(height), "9.0.0", "", flashvars, params);
+      },
+
+
+
+      /******** Movie methods ********/
+
+      obj.getRenderedMovieValue = function() {
+        return $(obj).find("div.nfnmovieparams").html();
+      },
+
+      obj.getEnteredMovieValue = function() {
+        return obj.movieurl.val() + "|" +
+          obj.movieimgurl.val() + "|" +
+          obj.moviewidth.val() + "|" +
+          obj.movieheight.val() + "|" +
+          (obj.movieinterface.attr("checked") ? "1" : "0") + "|" +
+          (obj.movieplay.attr("checked") ? "PLAY" : "STOP") + "|" +
+          (obj.movieinthide.attr("checked") ? "BOTTOM_HIDE" : "BOTTOM") + "|" +
+          (obj.moviesoundbtn.attr("checked") ? "1" : "0") + "|" +
+          (obj.moviefullscreen.attr("checked") ? "1" : "0");
+      },
+
+      obj.setStaticMovieContent = function(value) {
+        $(obj).empty();
+        $(obj).append(
+          $("<div />").addClass("nfnmovieparams").css("display","none").html(value)
+        );
+        if (value.length > 0) obj.initMovie();
+      },
+
+      obj.setEditMovieContent = function(value) {
+        var vals = value.split('|');
+        obj.movieurl.val(vals[0]);
+        obj.movieimgurl.val(vals.length > 1 ? vals[1] : "");
+        obj.moviewidth.val(vals.length > 2 ? vals[2] : "100");
+        obj.movieheight.val(vals.length > 3 ? vals[3] : "100");
+        obj.movieinterface.attr("checked",(vals.length > 4 ? vals[4]=="1" : true));
+        obj.movieplay.attr("checked",(vals.length > 5 ? vals[5]=="PLAY" : true));
+        obj.movieinthide.attr("checked",(vals.length > 6 ? vals[6]=="BOTTOM_HIDE" : true));
+        obj.moviesoundbtn.attr("checked",(vals.length > 7 ? vals[7]=="1" : true));
+        obj.moviefullscreen.attr("checked",(vals.length > 8 ? vals[8]=="1" : true));
+      },
+
+      obj.generateMovieDOM = function(callback) {
+
+        if (obj.hasPermission.edit) {
+
+          if (obj.hasPermission.isSysAdmin) {
+            obj.permdiv = obj.getPermdiv();
+            $(obj).before(obj.permdiv);
+          }
+          if (obj.hasPermission.show || obj.hasPermission.share || obj.hasPermission.restore || obj.hasPermission.datecontrol || obj.hasPermission.controltype || (obj.hasPermission.languageDependent && languages.length > 1)) {
+            obj.toolsdiv = obj.getToolsDiv();
+            $(obj).before(obj.toolsdiv);
+          }
+
+          obj.editbtndiv = obj.getEditbtndiv();
+          $(obj).before(obj.editbtndiv);
+        }
+
+        if (obj.hasPermission.edit) {
+          obj.statdiv.mouseover(function() {obj.highlight(true);});
+          obj.statdiv.mouseout(function() {obj.highlight(false);});
+
+          obj.movieurl = $("<input />").attr({"id":$(obj).attr("id") + "_movieurl", "type":"text"}).css("width","200px");
+          obj.movieimgurl = $("<input />").attr({"id":$(obj).attr("id") + "_movieimgurl", "type":"text"}).css("width","200px");
+          obj.moviewidth = $("<input />").attr("type","text").css("width","40px");
+          obj.movieheight = $("<input />").attr("type","text").css("width","40px");
+          obj.movieinterface = $("<input />").attr("type","checkbox");
+          obj.movieplay = $("<input />").attr("type","checkbox");
+          obj.movieinthide = $("<input />").attr("type","checkbox");
+          obj.moviesoundbtn = $("<input />").attr("type","checkbox");
+          obj.moviefullscreen = $("<input />").attr("type","checkbox");
+          obj.setEditMovieContent(mainProp.value);
+
+          obj.editdiv = $("<div />").addClass("_ajaxControls").append(
+            $("<div />").append(obj.getSaveButtons(false, false))
+          ).append(
+            $("<table />").append(
+              $("<tr />").append(
+                $("<td />").html("<b>" + attranslate("Film (flv)") + "</b>")).append(
+                $("<td />")).append(
+                $("<td />").html("<b>" + attranslate("Startbild") + "</b>")).append(
+                $("<td />"))
+            ).append(
+              $("<tr />").append(
+                $("<td />").append(
+                  obj.movieurl
+                )
+              ).append(
+                $("<td />").append(
+                  $("<a />").attr("href","javascript:void(0)").focus(function(){this.blur();}).click(function(){movieflvOpenMediaBank($(obj).attr("id"));}).append(
+                    $("<img />").attr({"src":"admin/gfx/documentbank.gif", "title":attranslate("Öppna mediabanken"), "border":"0"})
+                  )
+                )
+              ).append(
+                $("<td />").append(
+                  obj.movieimgurl
+                )
+              ).append(
+                $("<td />").append(
+                  $("<a />").attr("href","javascript:void(0)").focus(function(){this.blur();}).click(function(){movieimgOpenMediaBank($(obj).attr("id"));}).append(
+                    $("<img />").attr({"src":"admin/gfx/documentbank.gif", "title":attranslate("Öppna mediabanken"), "border":"0"})
+                  )
+                )
+              )
+            )
+          ).append(
+            $("<table />").append(
+              $("<tr />").append(
+                $("<td />").html("<b>" + attranslate("Bredd") + "</b>")).append(
+                $("<td />").html("<b>" + attranslate("Höjd") + "</b>")).append(
+                $("<td />").html("<b>" + attranslate("Kontroller") + "</b>")).append(
+                $("<td />").html("<b>" + attranslate("Göm kontroller") + "</b>")).append(
+                $("<td />").html("<b>" + attranslate("Spela") + "</b>")).append(
+                $("<td />").html("<b>" + attranslate("Ljudkontroll") + "</b>")).append(
+                $("<td />").html("<b>" + attranslate("Helskärm") + "</b>"))
+            ).append(
+              $("<tr />").append(
+                $("<td />").append(obj.moviewidth)).append(
+                $("<td />").append(obj.movieheight)).append(
+                $("<td />").append(obj.movieinterface)).append(
+                $("<td />").append(obj.movieinthide)).append(
+                $("<td />").append(obj.movieplay)).append(
+                $("<td />").append(obj.moviesoundbtn)).append(
+                $("<td />").append(obj.moviefullscreen))
+            )
+          );
+
+
+          $(obj).before(obj.editdiv);
+        }
+
+        obj.setDimControl();
+
+        if (callback) callback();
+      },
+
+      obj.initMovie = function() {
+        obj.moviediv = $("<div />").attr("id",$(obj).attr("id") + "_moviediv");
+        $(obj).append(obj.moviediv);
+
+        var vals = $(obj).find("div.nfnmovieparams").html().split('|');
+
+        var movieurl = vals[0];
+        var image = (vals.length > 1 ? vals[1] : "");
+        var width = (vals.length > 2 ? parseInt(vals[2]) : 200);
+        if (isNaN(width)) width = 200;
+        var height = (vals.length > 3 ? parseInt(vals[3]) : 200);
+        if (isNaN(height)) height = 200;
+        var showiface = (vals.length > 4 ? vals[4] : "1");
+        var playmode = (vals.length > 5 ? vals[5] : "PLAY");
+        var ctrlmode = (vals.length > 6 ? vals[6] : "BOTTOM_HIDE");
+        var soundbtn = (vals.length > 7 ? vals[7] : "1");
+        var fullscreen = (vals.length > 8 ? vals[8] : "1");
+
+        var fheight = (ctrlmode == "BOTTOM" && showiface == "1" ? height + 25 : height);
+
+        $(obj).css({"width":width, "height":fheight})
+
+        var params = {
+          bgcolor:settings.moviebg,
+          play:true,
+          loop:true,
+          allowFullScreen:(fullscreen == "1"),
+          quality:"high",
+          wmode:"transparent",
+          version:"9.0.0"
+        };
+
+        var flashvars = {
+          play_mode:playmode,
+          control_mode:ctrlmode,
+          movie_path:movieurl,
+          image_path:image,
+          movie_width:width,
+          movie_height:height,
+          color_theme:settings.color_theme,
+          color_theme_on:settings.color_theme_on,
+          color_theme_bg:settings.color_theme_bg,
+          show_interface:showiface,
+          control_options:"1,1,1,1," + soundbtn + "," + fullscreen
+        };
+        swfobject.embedSWF("/admin/flash/flv_player.swf", $(obj).attr("id") + "_moviediv", String(width), String(fheight), "9.0.0", "", flashvars, params);
+      },
+
+
+
+
+      obj.init();
+
+    });
+
+    return this;
+  }
+
+
+  $.fn.ajaxcontrol_getValue = function() {
+    var val = [];
+    this.each(function(){
+      val.push(this.getPropValue());
+    });
+    if (val.length > 1) return val;
+    else return val[0];
+  }
+
+
+  $.fn.ajaxcontrol_setContentContent = function(html) {
+    return this.each(function(){
+      this.setEditContent(html);
+      this.setStaticContent(html);
+    });
+  }
+
+
+  $.fn.ajaxcontrol_setStaticContent = function(html) {
+    return this.each(function(){
+      this.setStaticContent(html);
+    });
+  }
+
+
+  $.fn.ajaxcontrol_setEditContent = function(html) {
+    return this.each(function(){
+      this.setEditContent(html);
+    });
+  }
+
+
+  $.fn.ajaxcontrol_setPropertyId = function(propertyId, callback) {
+    return $(this).ajaxcontrol_setProperty("", propertyId, callback);
+  }
+
+
+  $.fn.ajaxcontrol_setPropertyName = function(propertyName, callback) {
+    return $(this).ajaxcontrol_setProperty(propertyName, 0, callback);
+  }
+
+
+  $.fn.ajaxcontrol_setProperty = function(propertyName, propertyId, callback) {
+
+    var currset = this;
+    var nofset = 0;
+    function setDone() {
+      nofset++;
+      if (nofset == currset.length && callback)
+        callback();
+    }
+
+    return this.each(function(){
+      this.setProperty(propertyName, propertyId, setDone);
+    });
+  }
+
+
+  $.fn.ajaxcontrol.defaults = {
+    /* General */
+    width : null,
+    height : null,
+    defwidth : 300,
+    defheight : 150,
+    dateControlled : false,
+    contentByAjax : false,
+    fixParentOverflow : true,
+    onInitDone : null,
+
+    /* Tiny */
+    relativeUrls : true,
+    baseUrl : "/",
+    convertUrls : true,
+    css : '/css/base.css, /css/tiny.css',
+    toolbarItems : "",
+    toolbarLocation : "external",
+    toolbarConfig : "extended",
+    toolbarItems : "",
+    force_p_newlines: true,
+    invalid_elements: "",
+    draggableToolbar : false,
+    useZipTiny : false,
+    beforeShowEditor : null,
+    beforeHideEditor : null,
+    afterShowEditor : null,
+    afterHideEditor : null,
+    validElements : "script[charset|defer|language|src|type],nfnscript[charset|defer|language|src|type],style[type]",
+    debug : false,
+
+    /* Text */
+    textmode : "singleline",
+
+    /* Images */
+    cyclespeed : 1000,
+    manualCycling:false,
+    pagerNavigator:null,
+    pagerAnchorBuilder:null,
+    cycleThumbs:true,
+    thumbWidth:100,
+    thumbSpacing:5,
+
+    /* Flash */
+    flashbg : "#ffffff",
+
+    /* Movie */
+    moviebg : "#ffffff",
+    color_theme:"ffffff",
+    color_theme_on:"999999",
+    color_theme_bg:"cccccc"
+  };
+
+})(jQuery);
+
+
+function showEditControls() {
+  var tbpos = [];
+  $("div .ajaxToolbarStatic").each(function(){
+    $(this).show();
+    var curry = $(this).offset().top;
+    var currh = $(this).height();
+    var margin = 0;
+    for (var i=0; i < tbpos.length; i++) {
+      if (curry >= tbpos[i].y && curry <= tbpos[i].y+tbpos[i].height)
+        margin += tbpos[i].height - (curry-tbpos[i].y);
+    }
+    if (margin > 0) $(this).css("margin-top",margin);
+    tbpos.push({y:curry+margin, height:currh});
+  });
+}
+
+function cycleOpenMediaBank(objid, objwidth) {
+  var snip = (objwidth == 0 ? "" : "&maxwidth=" + objwidth);
+  window.open("/admin/DocumentBank/DocumentBank.aspx?callback=cycleMediabankCb&params=" + objid + snip, 'MB', 'width=900,height=600,resizable=yes');
+}
+function cycleMediabankCb(docInfo, param) {
+  var ids = param.split('|');
+  var rownr = parseInt(ids[1]) + 2;
+  var tr = $("#" + ids[0] + "imgtable").find("tbody").children("tr:nth-child(" + rownr + ")");
+  var td = tr.children("td:nth-child(2)");
+  var inps = td.children(":first-child");
+  var inpw = td.children(":nth-child(2)");
+  var inph = td.children(":nth-child(3)");
+  var img = td.find("img");
+
+  img.attr({"src":"/admin/DocumentBank/thumbnail.aspx?image=" + docInfo.url + "&width=50&heigh=50"});
+  inps.val(docInfo.url);
+  inpw.val(docInfo.width);
+  inph.val(docInfo.height);
+}
+
+function flashOpenMediaBank(objid) {
+  window.open("/admin/DocumentBank/DocumentBank.aspx?callback=flashMediabankCb&params=" + objid, 'MB', 'width=900,height=600,resizable=yes');
+}
+function flashMediabankCb(docInfo, param) {
+  if (docInfo.filename.split('.')[1] == "swf") {
+    var inpurl = $("#" + param + "_flashurl");
+    inpurl.val(docInfo.url);
+    inpurl.parent().next().next().children("input").val(docInfo.width);
+    inpurl.parent().next().next().next().children("input").val(docInfo.height);
+  }
+  else alert(translate("Endast flashfiler (swf) kan användas"));
+}
+
+function movieflvOpenMediaBank(objid) {
+  window.open("/admin/DocumentBank/DocumentBank.aspx?callback=movieflvMediabankCb&params=" + objid, 'MB', 'width=900,height=600,resizable=yes');
+}
+function movieflvMediabankCb(docInfo, param) {
+  var ext = docInfo.filename.split('.')[1];
+  if (ext == "flv" || ext == "f4v") {
+    var inpurl = $("#" + param + "_movieurl");
+    inpurl.val(docInfo.url);
+  }
+  else alert(translate("Endast flashfilmfiler (flv, f4v) kan användas"));
+}
+
+function movieimgOpenMediaBank(objid) {
+  window.open("/admin/DocumentBank/DocumentBank.aspx?callback=movieimgMediabankCb&params=" + objid, 'MB', 'width=900,height=600,resizable=yes');
+}
+function movieimgMediabankCb(docInfo, param) {
+  if (docInfo.type == "image") {
+    var inpurl = $("#" + param + "_movieimgurl");
+    inpurl.val(docInfo.url);
+    var inprow = inpurl.parent().parent().parent().parent().next().children("tbody:first-child").children("tr:nth-child(2)");
+    inprow.children("td:first-child").children("input:first-child").val(docInfo.width);
+    inprow.children("td:nth-child(2)").children("input:first-child").val(docInfo.height);
+  }
+  else alert(translate("Endast bildfiler kan användas"));
+}
+
+function ac_writeFlash(id, p) {
+  if (!p) return;
+  if (!p.wmode) p.wmode = "transparent";
+  ac_writeEmbed(id,
+    'D27CDB6E-AE6D-11cf-96B8-444553540000',
+    'http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,40,0',
+    'application/x-shockwave-flash',
+    p
+  );
+}
+
+function ac_writeShockWave(id, p) {
+  ac_writeEmbed(id,
+  '166B1BCA-3F9C-11CF-8075-444553540000',
+  'http://download.macromedia.com/pub/shockwave/cabs/director/sw.cab#version=8,5,1,0',
+  'application/x-director',
+    p
+  );
+}
+
+function ac_writeQuickTime(id, p) {
+  ac_writeEmbed(id,
+    '02BF25D5-8C17-4B23-BC80-D3488ABDDC6B',
+    'http://www.apple.com/qtactivex/qtplugin.cab#version=6,0,2,0',
+    'video/quicktime',
+    p
+  );
+}
+
+function ac_writeRealMedia(id, p) {
+  ac_writeEmbed(id,
+    'CFCDAA03-8BE4-11cf-B84B-0020AFBBCCFA',
+    'http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,40,0',
+    'audio/x-pn-realaudio-plugin',
+    p
+  );
+}
+
+function ac_writeWindowsMedia(id, p) {
+  p.url = p.src;
+  ac_writeEmbed(id,
+    '6BF52A52-394A-11D3-B153-00C04F79FAA6',
+    'http://activex.microsoft.com/activex/controls/mplayer/en/nsmp2inf.cab#Version=5,1,52,701',
+    'application/x-mplayer2',
+    p
+  );
+}
+
+function ac_writeEmbed(id, cls, cb, mt, p) {
+  var h = '', n;
+
+  if (!p) return;
+  h += '<object classid="clsid:' + cls + '" codebase="' + cb + '"';
+  h += typeof(p.id) != "undefined" ? 'id="' + p.id + '"' : '';
+  h += typeof(p.name) != "undefined" ? 'name="' + p.name + '"' : '';
+  h += typeof(p.width) != "undefined" ? 'width="' + p.width + '"' : '';
+  h += typeof(p.height) != "undefined" ? 'height="' + p.height + '"' : '';
+  h += typeof(p.align) != "undefined" ? 'align="' + p.align + '"' : '';
+  h += '>';
+
+  for (n in p)
+    h += '<param name="' + n + '" value="' + p[n] + '">';
+
+  h += '<embed type="' + mt + '"';
+
+  for (n in p)
+    h += n + '="' + p[n] + '" ';
+
+  h += '></embed></object>';
+
+  if (document.getElementById(id)) document.getElementById(id).innerHTML = h;
+}

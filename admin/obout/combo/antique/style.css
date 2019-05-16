@@ -1,0 +1,104 @@
+@media screen
+{	
+	.ob_cbContainer
+	{
+		text-align:left;
+		border: 1px solid #CCCCCC;
+		background-color: #F8F6F1;						
+	}
+	
+	.ob_cbTopContainer
+	{
+		border:none 0px;
+		padding: 0px;				
+		background-color: #F8F6F1;
+		border-left: 1px solid #CECECE;
+		height: 20px;	
+	}
+	
+	.ob_cbButtonContainer
+	{
+		width: 23px;
+		border:0px;		
+		float:right;
+		padding: 0px;
+		margin: 0px;
+	}
+		
+	.ob_cbTextbox
+	{
+		font: 9pt Verdana;
+		padding-left:2px;		
+		border:0px solid #CCCCCC;	
+		background-color: #F8F6F1;
+		padding-bottom: 0px;
+		padding-top: 0px;
+		height: 18px;
+		width: 100%;
+	}
+		
+	.ob_cbOption
+	{
+		font: 9pt Verdana;
+		background-color: #F8F6F1;
+		padding: 2px;	
+		padding-left: 1px;
+		vertical-align: middle;	
+	}
+	
+	.ob_cbOptionOver
+	{
+		font: 9pt Verdana;
+		/*background-color: #D6C9B2;*/
+		background-color: #E2D9C8;
+		color: #000000;
+		padding: 2px;
+		padding-left: 1px;	
+		vertical-align: middle;	
+		cursor: pointer;
+	}		
+	
+	.ob_cbOptionIcon
+	{		
+		width: 16px;
+		height: 16px;
+		border: 0px;
+	}
+	
+	.ob_cbOptionIconContainer
+	{
+		vertical-align: middle;
+		width: 16px;	
+		padding: 3px;
+		cursor: pointer;
+	}
+	
+	.ob_cbButton
+	{
+		border: 0px;
+		cursor: pointer;		
+	}			
+	
+	.ob_cbButtonOver
+	{
+		border: 0px;
+		cursor: pointer;
+	}
+	
+	.ob_cbTables
+	{
+		border-collapse: separate;		
+		border-spacing: 0px;
+		padding: 0px;		
+	}
+	
+	.ob_cbTables td
+	{
+		/*padding: 0px;*/
+	}
+	
+	.ob_cbInvisible
+	{
+		display: none;
+	}
+}

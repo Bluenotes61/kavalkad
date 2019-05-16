@@ -1,0 +1,82 @@
+/* $Date: 2009-04-17 23:12:31 +0200 (fr, 17 apr 2009) $    $Revision: 4820 $ */
+ 
+#maincontrols {
+  background-color:#fff;
+  border:solid 2px #ccc;
+  padding:10px;
+}
+#maincontrols, #maincontrols td {
+  font-family:Verdana;
+  font-size:xx-small;
+  line-height:1em;
+}
+#maincontrols img {
+  border:none;
+  margin-top:6px;
+  margin-right:6px;
+}
+
+.maincontrols_dim {
+  filter:alpha(opacity:50);
+  KHTMLOpacity:0.5;
+  MozOpacity:0.5;
+  opacity:0.5;
+}
+
+.maincontrols_highlight {
+  filter:alpha(opacity:100);
+  KHTMLOpacity:1;
+  MozOpacity:1;
+  opacity:1;
+}
+
+.pageform {
+  font-family:Verdana;
+  font-size:xx-small;
+  background-color:#fff;
+  border:solid 2px #ccc;
+  padding:5px;
+  position:absolute;
+  display:none;
+}
+
+.pageform h2 {
+  font-size:small;
+  font-weight:bold;
+  margin:0 0 5px 0;
+}
+
+.pageform input {
+  font-size:xx-small;
+}
+.pageform .pftable {
+  width:310px;
+}
+.pageform .pfbtn {
+  text-align:right;
+}
+.p_err {
+  position:absolute;
+  border:solid 1px #ccc;
+  background-color:#fff;
+  color:#ff0000;
+  padding:10px;
+  font-weight:bold;
+  display:none;
+}
+.defaultSkin .mceExternalToolbar {
+  z-index:1000;
+}
+
+#allpagesdiv a.inactivepage, #relatedpagesdiv span.inactivepage {
+  color:#aaa;
+}
+
+.ajaxControl {
+  min-width:50px;
+  min-height:10px;
+}
+
+.moveableControl {
+  z-index:100;
+}

@@ -1,0 +1,46 @@
+.imgswap_editordiv {
+  background-color:#f0f0ee;
+  border:ridge 2px #000;
+  color:#000;
+  font-size:10px;
+  position:absolute;
+  display:none;
+}
+
+.imgswap_editformdiv {
+  position:absolute;
+  background-color:#fff;
+  border:solid 1px #ccc;
+  padding:10px;
+  display:none;
+}
+
+
+.imgswap_editor_inner {
+  margin:0 10px 10px 10px;
+}
+.imgswap_editor_scroll {
+  overflow:auto;
+}
+.imgswap_editor_new {
+  margin-bottom:5px;
+}
+
+.imgswap_editor_info {
+  position:absolute;
+  background-color:#fff;
+  border:solid 1px #ccc;
+  padding:10px;
+  display:none;
+}
+
+.imgswap_infotable, .imgswap_infotable td {
+  border:solid 1px #ccc;
+}
+
+
+.imgswap_pen {
+  padding:10px;
+  background-color:#fff;
+  border:solid 1px #ccc;
+}

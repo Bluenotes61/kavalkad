@@ -1,0 +1,7 @@
+.acnavleft { width:15px;height:50px;background:url(left.gif) no-repeat center center;cursor:pointer;float:left;}
+.acnavigator { float:left;width:300px;overflow:hidden;height:50px;background:url(cyclebg.gif) center repeat-x;margin-left:5px;margin-right:5px}
+.acnavigator a { margin-left:5px;margin-right:5px;}
+.acnavigator a img { opacity:0.5 }
+.acnavigator a.activeSlide img { opacity:1 }
+.acnavright { width:15px;height:50px;background:url(right.gif) no-repeat center center;cursor:pointer;float:left;}
+

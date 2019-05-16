@@ -1,0 +1,28 @@
+<JS - Common>
+admin/jstools/jquery/jquery-1.4.2.js
+admin/jstools/jquery/plugins/nfn/jquery.nfn.js
+admin/jstools/jquery/plugins/ajaxcontrol/jquery.ajaxcontrol.js
+admin/jstools/jquery/plugins/cycle/jquery.cycle.all.min.js
+admin/jstools/base.js
+js/base.js
+
+<JS - Loggedin>
+
+<JS - Admin>
+admin/script/loggedin.js
+admin/jstools/jquery/plugins/dragndrop/jquery.event.drag-1.5.min.js
+admin/jstools/jquery/plugins/treeview/jquery.treeview.js
+admin/jstools/datetimepicker/calendar.js
+admin/jstools/datetimepicker/lang/calendar-{language}.js
+
+<CSS - Common>
+css/base.css
+css/master.css
+
+<CSS - Loggedin>
+
+<CSS - Admin>
+admin/css/loggedin.css
+admin/jstools/jquery/plugins/ajaxcontrol/ajaxcontrol.css
+admin/jstools/datetimepicker/skins/tiger/theme.css
+admin/jstools/jquery/plugins/treeview/jquery.treeviewpages.css

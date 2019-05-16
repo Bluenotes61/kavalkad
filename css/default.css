@@ -1,0 +1,148 @@
+#intro h1 {
+  text-align:center;
+}
+#intro ul {
+  width:200px;
+  margin: 0 auto 20px auto;
+}
+
+.pop {
+  border:solid 3px #ccc;
+  display:none;
+  background-color:#fff;
+  position:absolute;
+  z-index:10;
+}
+
+#poptext {
+  width:700px;
+    position:absolute;
+  margin:30px 0 0 140px;
+}
+
+#printbtn {
+  float:left;
+}
+.closebtn {
+  float:right;
+}
+.editbtn {
+  width:100px;
+  float:left;
+}
+
+h2#i_title {
+  float:left;
+  font-weight:bold;
+  font-size:20px;
+  line-height:24px;
+}
+#info {
+  margin:0 20px 0 20px;
+}
+#i_spex {
+  float:right;
+  font-weight:bold;
+  font-size:16px;
+}
+#i_melody {
+  font-size:16px;
+  font-style:italic;
+}
+
+#textdiv {
+  margin:30px 20px 20px 20px;
+}
+
+/*#textdiv p, td {
+  font-size:16px;
+  line-height:20px;
+}*/
+
+#infopop, #newpop {
+  position:fixed;
+  width:800px;
+  margin:30px 0 0 80px;
+}
+
+#infopop .edit {
+  display:none;
+}
+.songpop input {
+  width:590px;
+}
+
+.songpop input.uppsorder {
+  width:30px;
+}
+.songpop #melodytable input {
+  width:175px;
+}
+
+#songinfo {
+}
+#infotable {
+  width:100%;
+  padding:0 10px 10px 10px;
+}
+
+#melodytable {
+  margin:10px 0 10px 0;
+}
+#melodytable td {
+  padding-right:10px;
+}
+
+#textraddiv {
+  background:url("../gfx/tablebg.png") repeat-x scroll 50% 50% #E6E6E6;
+  font-family:Verdana,Arial,sans-serif;
+  font-size:11px;
+  border:1px solid #D3D3D3;
+  border:1px solid #aaa;
+  border-bottom:none;
+  color:#555;
+  height:22px;
+  padding:2px 0 2px 10px;
+}
+#textraddiv input {
+  font-family:Verdana,Arial,sans-serif;
+  color:#555;
+  font-size:1em;
+  padding:0;
+  width:400px;
+}
+
+#uppsdd {
+  position:absolute;
+  display:none;
+  z-index:100;
+}
+
+#spexgridsdiv {
+  margin:40px auto 0 auto;
+  width:530px;
+}
+
+span.spex_edit, span.upps_edit {
+  display:none;
+}
+
+#addlinkdiv {
+  float:left;
+}
+#mediabank {
+  float:right;
+}
+
+.ajaxControl {
+  min-height: 50px;
+  min-width: 50px;
+}
+
+#logoutdiv {
+  margin-top:10px;
+  text-align:right;
+}
+#logoutdiv a {
+  font-weight:bold;
+}

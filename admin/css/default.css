@@ -1,0 +1,83 @@
+body {
+  background:#f5f5f5;
+}
+
+#maindiv {
+  border:solid 1px #aaaaaa;
+  margin:100px auto 0 auto;
+  width:300px;
+}
+
+#maindiv_inner {
+  border:solid 1px #ffffff;
+  background-color: #e0e0e0;
+}
+#urldiv {
+  margin-top:10px;
+  text-align:center;
+  font-size:18px;
+  font-weight:bold;
+}
+#logodiv {
+  margin:10px;
+  text-align:center;
+}
+
+
+#logindiv {
+  display:block;
+}
+#liform {
+  width:200px;
+  margin:0 auto 0 auto;
+}
+#liform input {
+  width:96px;
+}
+#libtn {
+  text-align:center;
+  margin:10px 0 10px 0;
+}
+#forgotlink {
+  display:none;
+  text-align:center;
+  margin:10px 0 10px 0;
+}
+
+
+#forgotdiv {
+  display:none;
+}
+#forgotform {
+  width:150px;
+  margin:0 auto 0 auto;
+}
+#forgotform input {
+  width:150px;
+}
+#sendbtn {
+  text-align:center;
+  margin:10px 0 10px 0;
+}
+#errdiv {
+  color:#ff0000;
+  display:none;
+}
+
+
+#reqresult {
+  display:none;
+  text-align:center;
+}
+#reqerr {
+  display:none;
+  width:260px;
+  margin-left:18px;
+  margin-top:10px;
+  text-align:center;
+}
+#okreq {
+  margin:10px 0 10px 0;
+}
+
+

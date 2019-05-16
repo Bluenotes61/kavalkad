@@ -1,0 +1,42 @@
+(function() {
+  tinymce.PluginManager.requireLangPack('inserthtml');
+
+  tinymce.create('tinymce.plugins.InsertHTML', {
+    init : function(ed, url) {
+      var t = this;
+
+      t.editor = ed;
+
+      ed.addCommand('mceInsertHTML', function() {
+        ed.windowManager.open({
+          file : url + '/dialog.htm',
+          width : 550,
+          height : 290,
+          inline : 1
+        }, {
+          plugin_url : url
+        });
+      });
+
+
+      ed.addButton('inserthtml', {
+        title : 'inserthtml.desc',
+        image: url + '/img/html.gif',
+        cmd : 'mceInsertHTML'
+      });
+    },
+
+    getInfo : function() {
+      return {
+        longname : 'Insert html code',
+        author : '040 Internet',
+        authorurl : 'http://www.040.se',
+        version : "1.0"
+      };
+    },
+
+  });
+
+  // Register plugin
+  tinymce.PluginManager.add('inserthtml', tinymce.plugins.InsertHTML);
+})();

@@ -1,0 +1,106 @@
+/* $Date: 2009-04-21 10:23:31 +0200 (ti, 21 apr 2009) $    $Revision: 4833 $ */
+.calendar_header {
+  height:30px;
+  color: #ffffff;
+  background-color: #666666;
+  border-left:3px solid #cccccc;
+  border-top:3px solid #cccccc;
+  border-right:3px solid #cccccc;
+  font-weight:bold;
+  font-size:12px;
+  line-height:30px;
+}
+.ch_left {
+  float:left;
+  width:20%;
+}
+.ch_mid {
+  float:left;
+  width:60%;
+  text-align:center;
+}
+.ch_right {
+  float:right;
+  width:20%;
+  text-align:right;
+}
+
+.calendar_month {
+  border-left:2px solid #cccccc;
+  border-bottom:2px solid #cccccc;
+  border-right:2px solid #cccccc;
+  width:100%;
+}
+
+.calendar_month td {
+}
+.calendar_month td.dayname {
+  border-left:1px solid #cccccc;
+  border-top:1px solid #cccccc;
+  background-color: #666666;
+  color: #ffffff;
+  height:10px;
+  text-align:center;
+  border-top:solid 1px #ffffff;
+}
+.calendar_month td.inmonth {
+  border-left:1px solid #cccccc;
+  border-top:1px solid #cccccc;
+  height:50px;
+  background-color: #ffffff;
+}
+.calendar_month td.notinmonth {
+  border-left:1px solid #cccccc;
+  border-top:1px solid #cccccc;
+  height:50px;
+  background-color: #f5f5f5;
+  color:#999999;
+}
+.calendar_month td.weekend {
+  border-left:1px solid #cccccc;
+  border-top:1px solid #cccccc;
+  height:50px;
+  background-color: #faeaea;
+}
+.calendar_month td.today {
+  height:50px;
+  background-color: #ffffff;
+  border: solid 2px #cc3333;
+}
+.calendar_month td.selectedday {
+}
+
+.calendar_month div.c_d {
+  font-weight:bold;
+  margin:5px;
+}
+.calendar_month div.c_dc {
+  margin:5px;
+  font-family: Arial,Helvetica,sans-serif;
+  font-size:10px;
+}
+
+
+#calendar_daydiv {
+  width:300px;
+  height:300px;
+  position:absolute;
+  display:none;
+  border:1px solid #cccccc;
+  background-image: url("../../gfx/boxtop.gif");
+  background-repeat:no-repeat;
+  background-color: #ffffff;
+}
+#calendar_dayheader {
+  float:left;
+  padding:10px 0 0 10px;
+  font-weight:bold;
+}
+#calendar_dayclose {
+  float:right;
+  cursor:pointer;
+}
+#calendar_daycontent {
+  margin:20px;
+}
+

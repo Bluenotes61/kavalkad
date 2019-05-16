@@ -1,0 +1,37 @@
+#startcontent {
+  margin-top:60px;
+}
+#startcontent h1, #startcontent h3 {
+  text-align:center;
+}
+
+#un {
+  float:left;
+}
+#pw {
+  float:right;
+}
+
+#logindiv {
+  width:300px;
+  margin:50px auto 0 auto;
+}
+#logindiv input {
+  width:130px;
+}
+#li {
+  margin-top:10px;
+  text-align:center;
+}
+#li a {
+  font-weight:bold;
+}
+
+#loginerr {
+  padding:10px;
+  background-color:#fff;
+  border:solid 1px #ccc;
+  color:#ff0000;
+  position:absolute;
+  display:none;
+}

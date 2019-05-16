@@ -1,0 +1,7 @@
+/* $Date: 2009-04-17 23:12:31 +0200 (fr, 17 apr 2009) $    $Revision: 4820 $ */
+
+2009-11-09
+Major revision
+JQuery added.
+Files restructured
+Old stuff removed

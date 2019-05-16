@@ -1,0 +1,28 @@
+/* $Date: 2009-04-17 23:12:31 +0200 (fr, 17 apr 2009) $    $Revision: 4820 $ */
+ul.SimpleContextMenu {
+  display: none;
+  position: absolute;
+  margin: 0px;
+  padding: 0px;
+  list-style-type: none;
+  border-top: 1px solid #999;
+  border-left: 1px solid #999;
+  border-right: 1px solid #999;
+  z-index:1001;
+}
+
+ul.SimpleContextMenu li {
+  border-bottom: 1px solid #999;
+}
+
+ul.SimpleContextMenu li a {
+  display: block;
+  padding: 2px 10px 3px 10px;
+  color: #000;
+  background: #eee;
+}
+
+ul.SimpleContextMenu li a:hover {
+  color: #ffffff;
+  background: #ccc;
+}

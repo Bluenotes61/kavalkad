@@ -1,0 +1,8 @@
+#popfield {
+  position:absolute;
+  display:none;
+  background-color:#fff;
+  padding:10px;
+  border:solid 1px #ccc;
+  z-index:10;
+}

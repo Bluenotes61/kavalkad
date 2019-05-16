@@ -1,0 +1,37 @@
+.cbo_seldiv {
+  float:left;
+  background-color:#a3d4a0;
+  color:#fff;
+  cursor:pointer;
+  width:300px;
+}
+.cbo_seldivinner {
+  margin:5px 10px 5px 10px;
+}
+.cbo_selarrow {
+  background-color:#a3d4a0;
+  float:left;
+  cursor:pointer;
+  margin-left:5px;
+  width:20px;
+  padding:5px;
+}
+.cbo_options {
+  background-color:#a3d4a0;
+  color:#fff;
+  position:absolute;
+  display:none;
+  width:300px;
+}
+.cbo_option {
+  cursor:pointer;
+  padding:5px 10px 5px 10px;
+}
+.cbo_option:hover {
+  background-color:#fff;
+  color:#a3d4a0;
+}
+.cbo_seloption {
+  background-color:#fff;
+  color:#a3d4a0;
+}

@@ -1,0 +1,70 @@
+<%-- $Date: 2010-02-12 00:32:36 +0100 (fr, 12 feb 2010) $    $Revision: 5940 $ --%>
+<%@ Master language="C#" AutoEventWireup="true" Src="behind/master.cs" Inherits="Master"%>
+<%@ Register Tagprefix="obspl" Namespace="OboutInc.Splitter2" Assembly="obout_Splitter2_Net" %>
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head runat="server">
+    <title></title>
+    <link rel="stylesheet" href="/admin/css/base.css" type="text/css">
+    <script type="text/javascript" src="/admin/jstools/jquery/jquery-1.3.2.js"></script>
+    <script type="text/javascript" src="/admin/jstools/base.js"></script>
+    <script type='text/javascript' src="/admin/script/base.js"></script>
+    <script type="text/javascript" src="/admin/jstools/robutton.js"></script>
+    <asp:ContentPlaceHolder id="Header" runat="server"></asp:ContentPlaceHolder>
+  </head>
+
+  <body>
+    <form id="pageform" runat="server">
+      <div class="HorizBar">
+        <div id="topMenu">
+          <asp:Repeater id="Menu" runat="server">
+            <HeaderTemplate><ul></HeaderTemplate>
+            <ItemTemplate>
+              <li>
+                <asp:HyperLink
+                  Text='<%# Cms.Translate(DataBinder.Eval(Container.DataItem, "Text")) %>'
+                  NavigateUrl='<%# DataBinder.Eval(Container.DataItem, "Url") %>'
+                  ToolTip = '<%# Cms.Translate(DataBinder.Eval(Container.DataItem, "ToolTip")) %>'
+                  Visible = '<%# DataBinder.Eval(Container.DataItem, "Enabled") %>'
+                  runat="server"
+                />
+                <asp:Label
+                  Text='<%# Cms.Translate(DataBinder.Eval(Container.DataItem, "Text")) %>'
+                  Visible = '<%# !Convert.ToBoolean(DataBinder.Eval(Container.DataItem, "Enabled")) %>'
+                  runat="server"
+                />
+              </li>
+            </ItemTemplate>
+            <FooterTemplate></ul></FooterTemplate>
+          </asp:Repeater>
+        </div>
+        <div id='logo040'><a href="http://www.040.se" onfocus="this.blur()" title="040 Internet" target="_blank"><asp:Image ImageUrl="~/admin/gfx/logo.png" Text="040 Internet" Tooltip="040 Internet" runat="server" /></a></div>
+        <div class="clearfloat"></div>
+      </div>
+
+      <div class="HorizBar">
+        <asp:ContentPlaceHolder id="ButtonBar" runat="server"></asp:ContentPlaceHolder>
+      </div>
+
+      <div id="Busy"><img src='gfx/wait.gif' /></div>
+
+      <obspl:Splitter
+        StyleFolder="obout/splitter/styles/bw"
+        id="mainSplit"
+        CookieDays="0"
+        PanelResizable="right"
+        runat="server"
+      >
+        <LeftPanel>
+          <content><asp:ContentPlaceHolder id="LeftFrame" runat="server"></asp:ContentPlaceHolder></content>
+        </LeftPanel>
+        <RightPanel>
+          <content><asp:ContentPlaceHolder id="RightFrame" runat="server"></asp:ContentPlaceHolder></content>
+        </RightPanel>
+      </obspl:Splitter>
+      <asp:ContentPlaceHolder id="SingleFrame" runat="server"></asp:ContentPlaceHolder>
+
+    </form>
+  </body>
+</html>

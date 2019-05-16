@@ -1,0 +1,49 @@
+/* $Date: 2010-11-22 14:32:20 +0100 (må, 22 nov 2010) $    $Revision: 7099 $ */
+
+#maincontent {
+  margin:20px;
+}
+
+#leftcol {
+  float:left;
+}
+#rightcol {
+  float:left;
+  margin-left:20px;
+}
+.stablediv {
+  margin-bottom:40px;
+  float:left;
+}
+#attribPop {
+  border:solid 2px #ccc;
+  background-color:#fff;
+  padding:0 10px 10px 10px;
+  position:absolute;
+  display:none;
+  z-index:10;
+  margin-left:10px;
+}
+#closediv {
+  text-align:right;
+}
+
+
+#recoverdiv {
+  margin-top:20px;
+}
+
+#recoverok {
+  position:absolute;
+  display:none;
+  padding:10px;
+  background-color:#fff;
+  border:solid 1px #ccc;
+}
+
+.itemtable .hl {
+  width:auto;
+}
+.itemtable .hlv {
+  width:auto;
+}

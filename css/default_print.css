@@ -1,0 +1,27 @@
+body {
+  background-color:#fff;
+}
+
+#contentarea {
+  padding:0;
+}
+
+#poptext {
+  border:none;
+  background-color:#fff;
+  position:relative;
+  left:0;
+  top:0;
+  display:block:
+  width:100%;
+  margin:0;
+}
+
+#header, #intro, #infopop, #textraddiv, .toppop, #songgriddiv, #spexgridsdiv, #addlinks, #logoutdiv, #cbupps, #maincontrols {
+  display:none;
+}
+
+#maincontent {
+  width:auto;
+  margin:0;
+}

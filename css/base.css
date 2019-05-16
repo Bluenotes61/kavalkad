@@ -1,0 +1,32 @@
+html { margin: 0; padding: 0; }
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, "Arial Regular", Helvetica, sans-serif;
+  background-color:#ffffcc;
+}
+body, p, td {
+  font-size: 14px;
+  line-height: 18px;
+  color:#000;
+}
+
+h1 { font-size: 72px; font-weight: bold; color:#2DA834; line-height: 80px; margin: 0; }
+h2 { font-size: 36px; font-weight: bold; color:#2DA834; line-height: 40px; margin: 0; }
+h3 { font-size: 125%; font-weight: bold; line-height: 1.0em; margin: 0; }
+h4,h5,h6 { font-size: 110%; font-weight: bold; line-height: 1.0em; margin: 0; }
+
+p { margin: 6px 0 0 0; }
+hr { width: 100%; border: 0; color: #ccc; background-color: #ccc; height: 1px; margin: 10px 0 10px 0; padding: 0; }
+a:link, a:visited, a:active { color: #009933; text-decoration: none; outline: none; }
+a:hover { color: #000; text-decoration: none; outline: none; }
+img { border: 0; outline: none; }
+.clearfloat { clear:both; margin-top:-1px; height:1px; overflow:hidden; }
+.highlightEdit { background-color:#ccc; }
+
+.ajaxmess {
+  position:absolute;
+  display:none;
+  z-index:10;
+}

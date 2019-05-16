@@ -1,0 +1,37 @@
+<%@ Master language="C#" AutoEventWireup="true" Src="/behind/Master.cs" Inherits="Master"%>
+<%@ Register TagPrefix="NFN" Namespace="NFN.Controls" %>
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+  <head runat="server">
+    <link rel="stylesheet" media="print" type="text/css" href="css/base_print.css" />
+    <asp:ContentPlaceHolder id="HeaderContent" runat="server"></asp:ContentPlaceHolder>
+  </head>
+  <body id="bodyTag" runat="server">
+    <form id="mainForm" runat="server">
+
+      <div id='ajaxerr' class='ajaxmess'></div>
+      <div id='ajaxbusy' class='ajaxmess'><img src='gfx/ajaxwait.gif' alt='Jobbar' /></div>
+
+      <div id='maincontent'>
+        <asp:ContentPlaceHolder id="MainContent" runat="server"></asp:ContentPlaceHolder>
+      </div>
+
+      <NFN:MainControls runat=server/>
+    </form>
+
+    <script type="text/javascript">
+      var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+      document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+      try {
+        var pageTracker = _gat._getTracker("UA-475568-30");
+        pageTracker._trackPageview();
+      }
+      catch(err) {}
+    </script>
+
+  </body>
+</html>

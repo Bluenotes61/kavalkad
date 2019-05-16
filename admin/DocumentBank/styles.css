@@ -1,0 +1,269 @@
+/* $Date: 2010-11-22 14:32:20 +0100 (må, 22 nov 2010) $    $Revision: 7099 $ */
+/*** General ***/
+
+body {
+  margin:0;
+}
+body, input, select, td {
+  font-family: Geneva, Verdana, Arial, Helvetica, sans-serif;
+  font-size: 10px;
+  line-height: 12px;
+  color: #000000;
+}
+ul {
+  list-style-type:none;
+  margin:0;
+}
+a,a:visited,a:active {
+  color: #0f9cf0;
+  text-decoration : none;
+  outline:none;
+}
+
+a:hover {
+  color: #000000;
+  text-decoration: none;
+}
+
+
+/*** Classes ***/
+
+.separator {
+  float:left;
+  width:10px;
+  height:647px;
+  border-left: solid 1px #ffffff;
+  border-right: solid 1px #ffffff;
+}
+
+.DocArea{
+}
+.DocArea .DocumentBox{
+  height: 120px;
+  margin: 8px 4px;
+  float: left;
+  border: 2px solid #FFFFFF;
+  text-align: center;
+  cursor:pointer;
+}
+.DocArea .DocumentBox .Document{
+  height: 94px;
+  width: 100px;
+  border: 2px solid #FFFFFF;
+  text-align: center;
+}
+.DocArea .DocumentBox P{
+  margin-top: 3px;
+  text-align:center;
+}
+.DocArea .DocumentBox .DocLabel {
+  font-size: 20px;
+  font-weight:bold;
+  background-color:#cccccc;
+  text-align:center;
+  vertical-align:middle;
+  height:90px;
+}
+
+.SetDiv {
+  margin-top:10px;
+}
+.FieldSet {
+  overflow:hidden;
+  border:solid 1px #aaaaaa;
+}
+.FieldSet p {
+  margin :5px;
+}
+.FieldSet td {
+  margin :5px 0 0 0;
+}
+
+#ErrArea {
+  position:absolute;
+  z-index:1;
+  border:solid 2px #cccccc;
+  background-color:#ffffff;
+  width:400px;
+  padding:10px;
+  margin:20px;
+  display:none;
+}
+#ErrArea .errhead {
+  font-weight:bold;
+}
+#ErrArea .errmess {
+  margin-top:10px;
+}
+#ErrArea .errclose {
+  text-align:right;
+}
+
+.horizSeparator {
+  background-color:#e5e5e5;
+  width:100%;
+  padding:2px 0 2px 5px;
+  border-top: solid 1px #aaaaaa;
+  border-bottom: solid 1px #aaaaaa;
+}
+
+.clearfloat {
+  clear:both;
+  margin-top:-1px;
+  height:1px;
+  overflow:hidden;
+}
+
+.headerdiv {
+  padding-left:5px;
+  color: #000000;
+  background-image:url(gfx/head_bg.gif);
+}
+.headerdiv ul li {
+  display:inline;
+  margin-right:8px;
+}
+.textheader {
+  height:14px;
+}
+.buttonheader {
+  height:28px;
+}
+
+
+/*** Elements ***/
+
+#Busy {
+  position:absolute;
+  display:none;
+  z-index:100;
+  left:500px;
+  top:380px;
+  background-color:#e5e5e5;
+}
+
+#TopRow {
+  margin:3px 0 3px 5px;
+  background-image:url(gfx/head_bg.gif);
+}
+#TopRow a {
+  margin-right:10px;
+}
+#LeftHeader {
+}
+#CenterHeader {
+}
+#RightHeader {
+}
+
+#MainDiv {
+  width:1050px;
+  overflow:hidden;
+}
+
+#TreeArea {
+}
+
+#BrowseFrame {
+  margin-top:10px;
+}
+#SearchFrame {
+}
+#infosearch {
+  margin:10px;
+}
+#PreviewArea {
+  display:none;
+  position:absolute;
+  z-index:10;
+  background-color:#ffffff;
+}
+#PreviewAreaInner {
+  margin:10px;
+  float:left;
+  border:solid 1px #ccc;
+}
+#PreviewContent {
+  overflow:auto;
+}
+
+#PermissionArea{
+  background-color:#ffffff;
+  margin:0 10px 0 10px;
+}
+
+
+#InfoArea {
+}
+#FileInfo {
+  display:none;
+  margin:5px;
+}
+
+#UseInfo {
+  background-color:#ffffff;
+  display:none;
+}
+#UseImageInfo {
+  display:none;
+}
+#UseDocSpan {
+  display:none;
+}
+
+#docTable {
+}
+#docTable table {
+  width:100%;
+}
+#docTable .headRow td {
+  font-weight:bold;
+  padding:3px;
+  border-top:solid 1px #cccccc;
+  border-bottom:solid 1px #cccccc;
+  background-color:#e5e5e5;
+}
+#docTable .docRow td {
+  border-bottom:solid 1px #cccccc;
+  padding:3px;
+}
+
+
+
+
+#uploadProgress {
+  border:solid 3px #3a4c91;
+  background-color:#fff;
+  padding:10px;
+  position:absolute;
+  top:80px;
+  left:215px;
+  display:none;
+}
+#uploadProgress h3 {
+  margin:0 0 10px 0;
+}
+.uploadbar {
+  width:200px;
+  margin-top:3px;
+  margin-bottom:6px;
+  height:3px;
+  background-color:#ccc;
+}
+.uploadprogressbar {
+  height:3px;
+  background-color:#5bb028;
+}
+.uploaddonebar {
+  height:3px;
+  background-color:#3d5197;
+}
+.uploaddonebarerr {
+  height:3px;
+  background-color:#ff0000;
+}
+
+#FolderButtons * {
+  vertical-align:middle;
+}
+
